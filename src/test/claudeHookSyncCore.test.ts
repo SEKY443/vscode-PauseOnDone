@@ -5,6 +5,7 @@ import * as path from 'path';
 import {
   ClaudeSettings,
   buildHookCommand,
+  hasMatchingHook,
   readClaudeSettings,
   removeHook,
   syncHookPathsInSettings,
@@ -150,6 +151,26 @@ describe('removeHook', () => {
     const hooks = {};
     const changed = removeHook(hooks, 'Stop', 'hookRunner.js');
     assert.strictEqual(changed, false);
+  });
+});
+
+describe('hasMatchingHook', () => {
+  it('returns true when a matching hook exists', () => {
+    const groups = [{ matcher: '', hooks: [{ type: 'command', command: 'node "/x/out/hookRunner.js"' }] }];
+    assert.strictEqual(hasMatchingHook(groups, 'hookRunner.js'), true);
+  });
+
+  it('returns false when only unrelated hooks exist', () => {
+    const groups = [{ matcher: '', hooks: [{ type: 'command', command: 'echo something-else' }] }];
+    assert.strictEqual(hasMatchingHook(groups, 'hookRunner.js'), false);
+  });
+
+  it('returns false for undefined groups', () => {
+    assert.strictEqual(hasMatchingHook(undefined, 'hookRunner.js'), false);
+  });
+
+  it('returns false for an empty groups array', () => {
+    assert.strictEqual(hasMatchingHook([], 'hookRunner.js'), false);
   });
 });
 

@@ -3,6 +3,7 @@
 Automatically pauses your background music when an AI coding tool or script finishes a task, and resumes it once you get back to it. If nothing was playing, it plays a short local notification sound instead.
 
 Repository: https://github.com/SEKY443/vscode-PauseOnDone
+Marketplace: https://marketplace.visualstudio.com/items?itemName=SEKY443.vscode-pause-on-done
 
 ## Backstory
 
@@ -14,14 +15,14 @@ Maybe this logic could be useful for AI too, so I tried it with Claude Code, and
 
 - **Claude Code hook integration (recommended)** — hooks into Claude Code's `Stop` and `UserPromptSubmit` events directly, so it works even though `claude` is a full-screen interactive program that VS Code's terminal APIs can't observe. Pauses your music when Claude finishes responding, and resumes it automatically the next time you send a message — but only if this tool was the one that paused it.
 - **Terminal keyword / AI signal detection** — for ordinary commands and scripts (not full-screen TUIs), watches terminal output via VS Code's Shell Integration API for a custom keyword list, or built-in patterns like `Done for 5s` / `Thought for 1m 3s` commonly seen in AI coding tool status lines.
-- **Smart media detection** — on macOS, uses [`nowplaying-cli`](https://github.com/kirtan-shah/nowplaying-cli) (falls back to AppleScript for Spotify/Music.app) to detect and control whatever's currently playing, including media playing in a browser. On Linux, uses `playerctl`.
+- **Smart media detection** — on macOS, uses [`nowplaying-cli`](https://github.com/kirtan-shah/nowplaying-cli) (falls back to AppleScript for Spotify/Music.app) to detect and control whatever's currently playing, including media playing in a browser. On Linux, uses `playerctl`. On Windows, uses the built-in WinRT media session API via PowerShell — no extra install needed.
 - **No repeated dinging** — if the music is already paused from an earlier trigger, it won't play the notification sound again on every subsequent completion.
 
 ## Requirements
 
 - **macOS**: [`nowplaying-cli`](https://github.com/kirtan-shah/nowplaying-cli) is recommended (`brew install nowplaying-cli`). Without it, this falls back to checking Spotify/Music.app individually via AppleScript, which won't detect media playing in a browser.
 - **Linux**: [`playerctl`](https://github.com/altdesktop/playerctl) is recommended.
-- **Windows**: media pause/resume requires [`nircmd`](https://www.nirsoft.net/utils/nircmd.html) on your `PATH`; automatic playback *detection* isn't currently supported on Windows.
+- **Windows**: no extra install needed — detection and control use the built-in WinRT media session API (the same one Windows' own Now Playing overlay is built on) via PowerShell. [`nircmd`](https://www.nirsoft.net/utils/nircmd.html) on your `PATH` is only used as a fallback if that fails. **Not yet verified on a real Windows machine** — if you hit issues, please open an issue.
 
 On first activation, if the recommended tool for your platform is missing, the extension shows a one-time prompt offering to open a terminal and install it — nothing runs without you clicking the button.
 
@@ -29,7 +30,7 @@ On first activation, if the recommended tool for your platform is missing, the e
 
 This is the most reliable way to use this extension with Claude Code, since Claude Code's terminal UI can't be observed by VS Code's terminal APIs.
 
-Run **"Pause on Done: Set Up Claude Code Hook"** from the Command Palette. It shows you exactly what will be added to `~/.claude/settings.json` before writing anything, and preserves any hooks you've already configured for other purposes.
+On first activation, if no hook is configured yet, you'll get a one-time prompt offering to set it up — nothing is written until you click through it. You can also trigger it manually any time by running **"Pause on Done: Set Up Claude Code Hook"** from the Command Palette. Either way, it shows you exactly what will be added to `~/.claude/settings.json` before writing anything, and preserves any hooks you've already configured for other purposes.
 
 The hook path is kept in sync automatically on every VS Code startup, so it keeps working even after this extension updates to a new version (each update moves to a new install directory).
 
@@ -72,7 +73,7 @@ Before uninstalling this extension, run **"Pause on Done: Remove Claude Code Hoo
 ## Known limitations
 
 - VS Code's Shell Integration API never fires for full-screen interactive programs (like `claude`) that take over the terminal — use the hook integration instead for those.
-- Automatic playback detection on Windows isn't currently supported; media control there always falls back to the notification sound.
+- Windows support relies on a PowerShell/WinRT technique that hasn't been verified against a real Windows machine — it should work on Windows 10+, but if the WinRT call fails for any reason, detection reports "not playing" and control falls back to `nircmd`'s media-key toggle (which can't distinguish pause from resume).
 - The Claude Code hook integration requires starting a **new** `claude` session after setup — hooks are loaded once at session start.
 - `pauseOnDone.enabled` only controls the terminal-scanning path. The Claude Code hook is a separate standalone script with no access to VS Code's settings, so it keeps running even while `enabled` is off — that's intentional, since the hook is designed to keep working whether or not VS Code is even open. To disable it, run "Pause on Done: Remove Claude Code Hook" instead.
 

@@ -95,8 +95,10 @@ async function getMissingDependency(): Promise<MissingDependency | null> {
     };
   }
 
-  // Windows: needs nircmd to send media keys, but there's no universal package manager to
-  // detect it with — left to the user to install manually per the setup notes.
+  // Windows: detection and control primarily use a built-in WinRT API via PowerShell (see
+  // mediaControlCore.ts), no extra install needed. nircmd is only a fallback if that fails, and
+  // there's no universal package manager to detect/install it with — left to the user to install
+  // manually per the setup notes if they hit that fallback path.
   return null;
 }
 

@@ -161,9 +161,9 @@ async function isMediaPlaying(): Promise<boolean> {
       return isMediaPlayingMac();
     case 'linux':
       return isMediaPlayingLinux();
+    case 'win32':
+      return isMediaPlayingWindows();
     default:
-      // Windows currently has no stable, install-free CLI to check global playback state,
-      // so conservatively treat it as "not playing" and fall back to the notification sound.
       return false;
   }
 }
@@ -266,14 +266,109 @@ async function pauseMediaMac(): Promise<void> {
   await execAsync(`osascript -e '${escapeAppleScript(appleScript)}'`);
 }
 
+/**
+ * Windows media control: uses the same WinRT API Windows' own Now Playing / Media Control
+ * overlay is built on (GlobalSystemMediaTransportControlsSessionManager), via a PowerShell
+ * interop shim — there's no CLI equivalent to nowplaying-cli/playerctl available out of the box
+ * on Windows. Requires Windows 10+; runs through powershell.exe (Windows PowerShell 5.1, bundled
+ * with every Windows 10/11 install) specifically rather than pwsh/PowerShell 7, since the
+ * WinRT projection this technique relies on (System.Runtime.WindowsRuntime) has had inconsistent
+ * support in PowerShell 7's .NET-Core-based runtime.
+ *
+ * Caveat: this hasn't been verified against a real Windows machine — it's built from the same
+ * documented technique other open-source Windows Now Playing tools use, but if the WinRT call
+ * fails for any reason (older Windows, no active session, policy restrictions), every function
+ * here falls back to nircmd's media-key toggle (https://www.nirsoft.net/utils/nircmd.html, must
+ * be installed and on PATH), same as before this existed. isMediaPlayingWindows() has no such
+ * fallback since nircmd can't report playback state — it just reports "not playing" on failure,
+ * consistent with how the other platforms behave when their detection tool is unavailable.
+ */
+const POWERSHELL_MEDIA_BOILERPLATE = `
+Add-Type -AssemblyName System.Runtime.WindowsRuntime
+$asTaskGeneric = ([System.WindowsRuntimeSystemExtensions].GetMethods() | Where-Object { $_.Name -eq 'AsTask' -and $_.GetParameters().Count -eq 1 -and $_.GetParameters()[0].ParameterType.Name -eq 'IAsyncOperation\`1' })[0]
+function Await($WinRtTask, $ResultType) {
+    $asTask = $asTaskGeneric.MakeGenericMethod($ResultType)
+    $netTask = $asTask.Invoke($null, @($WinRtTask))
+    $netTask.Wait(-1) | Out-Null
+    return $netTask.Result
+}
+[Windows.Media.Control.GlobalSystemMediaTransportControlsSessionManager,Windows.Media.Control,ContentType=WindowsRuntime] | Out-Null
+$sessionManager = Await ([Windows.Media.Control.GlobalSystemMediaTransportControlsSessionManager]::RequestAsync()) ([Windows.Media.Control.GlobalSystemMediaTransportControlsSessionManager])
+$session = $sessionManager.GetCurrentSession()
+`;
+
+async function runWindowsMediaScript(actionScript: string): Promise<string> {
+  const scriptPath = path.join(os.tmpdir(), `pause-on-done-media-${Date.now()}-${Math.random().toString(36).slice(2)}.ps1`);
+  fs.writeFileSync(scriptPath, POWERSHELL_MEDIA_BOILERPLATE + actionScript, 'utf8');
+  try {
+    const { stdout } = await execAsync(
+      `powershell.exe -NoProfile -NonInteractive -ExecutionPolicy Bypass -File "${scriptPath}"`,
+      { timeout: 5000 }
+    );
+    return stdout.trim();
+  } finally {
+    try {
+      fs.unlinkSync(scriptPath);
+    } catch {
+      // Best-effort cleanup — a leftover temp .ps1 file is harmless.
+    }
+  }
+}
+
+async function isMediaPlayingWindows(): Promise<boolean> {
+  try {
+    const output = await runWindowsMediaScript(`
+if ($null -eq $session) { Write-Output 'none'; exit }
+$info = $session.GetPlaybackInfo()
+Write-Output $info.PlaybackStatus
+`);
+    // GlobalSystemMediaTransportControlsSessionPlaybackStatus enum: 4 = Playing
+    return output === '4';
+  } catch {
+    return false;
+  }
+}
+
 async function pauseMediaWindows(): Promise<void> {
-  // Windows has no built-in CLI to simulate the hardware media key —
-  // requires installing nircmd separately (https://www.nirsoft.net/utils/nircmd.html) and adding it to PATH.
+  try {
+    await runWindowsMediaScript(`
+if ($null -ne $session) {
+    Await ($session.TryPauseAsync()) ([bool]) | Out-Null
+}
+`);
+    return;
+  } catch {
+    // Fall through to the nircmd fallback below
+  }
+
   try {
     await execAsync('nircmd sendkeypress mediaplaypause');
   } catch {
     throw new Error(
-      'On Windows, nircmd must be installed and added to PATH to send media keys — see the setup notes.'
+      'Could not pause media playback on Windows. Install nircmd and add it to PATH as a fallback — see the setup notes.'
+    );
+  }
+}
+
+async function resumeMediaWindows(): Promise<void> {
+  try {
+    await runWindowsMediaScript(`
+if ($null -ne $session) {
+    Await ($session.TryPlayAsync()) ([bool]) | Out-Null
+}
+`);
+    return;
+  } catch {
+    // Fall through to the nircmd fallback below
+  }
+
+  try {
+    // nircmd's media key is a toggle rather than a true "play" command, so this fallback only
+    // actually resumes if the track happens to be paused right now.
+    await execAsync('nircmd sendkeypress mediaplaypause');
+  } catch {
+    throw new Error(
+      'Could not resume media playback on Windows. Install nircmd and add it to PATH as a fallback — see the setup notes.'
     );
   }
 }
@@ -290,9 +385,7 @@ async function resumeMedia(): Promise<void> {
       await execAsync('playerctl play');
       return;
     case 'win32':
-      // Windows uses the hardware media key (play/pause toggle) — same command as
-      // pauseMediaWindows, since it's a toggle: sending it twice is "pause -> resume".
-      await pauseMediaWindows();
+      await resumeMediaWindows();
       return;
     default:
       return;

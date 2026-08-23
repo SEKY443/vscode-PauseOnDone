@@ -4,6 +4,7 @@ import * as path from 'path';
 import {
   CLAUDE_SETTINGS_PATH,
   buildHookCommand,
+  hasMatchingHook,
   readClaudeSettings,
   removeHook,
   syncHookPathsInSettings,
@@ -11,6 +12,8 @@ import {
   writeClaudeSettings,
 } from './claudeHookSyncCore';
 import { STATE_FILE } from './mediaControlCore';
+
+const HAS_PROMPTED_SETUP_KEY = 'pauseOnDone.hasPromptedClaudeHookSetup';
 
 /**
  * Called on every activation. Keeps a previously-configured Claude Code hook's path in sync with
@@ -41,6 +44,21 @@ export function syncClaudeHookPaths(context: vscode.ExtensionContext, outputChan
   }
 }
 
+/** Actually writes the Stop + UserPromptSubmit hook entries. Shared by the explicit command and the first-run prompt below — the only difference between the two is how consent is asked for. */
+async function writeHookEntries(context: vscode.ExtensionContext, outputChannel: vscode.OutputChannel): Promise<void> {
+  const hookRunnerCommand = buildHookCommand(path.join(context.extensionPath, 'out', 'hookRunner.js'));
+  const resumeRunnerCommand = buildHookCommand(path.join(context.extensionPath, 'out', 'resumeRunner.js'));
+
+  const settings = readClaudeSettings() ?? {};
+  settings.hooks = settings.hooks ?? {};
+
+  upsertHook(settings.hooks, 'Stop', 'hookRunner.js', hookRunnerCommand);
+  upsertHook(settings.hooks, 'UserPromptSubmit', 'resumeRunner.js', resumeRunnerCommand);
+
+  writeClaudeSettings(settings);
+  outputChannel.appendLine(`[Pause on Done] Wrote Claude Code hooks to ${CLAUDE_SETTINGS_PATH}`);
+}
+
 /**
  * Explicit, user-triggered setup: adds (or re-syncs) the Stop + UserPromptSubmit hooks pointing
  * at this extension's current install path into ~/.claude/settings.json, after showing exactly
@@ -63,15 +81,64 @@ export async function setupClaudeHook(context: vscode.ExtensionContext, outputCh
     return;
   }
 
-  const settings = readClaudeSettings() ?? {};
-  settings.hooks = settings.hooks ?? {};
+  try {
+    await writeHookEntries(context, outputChannel);
+    void vscode.window.showInformationMessage(
+      'Pause on Done: Claude Code hook set up. Start a new `claude` session for it to take effect.'
+    );
+  } catch (err) {
+    outputChannel.appendLine(`[Pause on Done] Failed to write Claude Code settings: ${err}`);
+    void vscode.window.showErrorMessage(`Pause on Done: failed to write ${CLAUDE_SETTINGS_PATH}: ${err}`);
+  }
+}
 
-  upsertHook(settings.hooks, 'Stop', 'hookRunner.js', hookRunnerCommand);
-  upsertHook(settings.hooks, 'UserPromptSubmit', 'resumeRunner.js', resumeRunnerCommand);
+/**
+ * Called once on first activation (tracked via globalState, same pattern as
+ * dependencyInstaller.ts's install prompt): if no Claude Code hook is configured yet, proactively
+ * asks whether to set one up, instead of leaving it undiscoverable behind a Command Palette entry
+ * the user would only find if they already knew to look for it. Still requires an explicit click
+ * before writing anything — this surfaces the option, it doesn't bypass consent.
+ */
+export async function promptToSetupClaudeHookIfMissing(
+  context: vscode.ExtensionContext,
+  outputChannel: vscode.OutputChannel
+): Promise<void> {
+  const config = vscode.workspace.getConfiguration('pauseOnDone');
+  if (!config.get<boolean>('autoPromptSetupClaudeHook', true)) {
+    return;
+  }
+
+  if (context.globalState.get<boolean>(HAS_PROMPTED_SETUP_KEY, false)) {
+    return;
+  }
+
+  const settings = readClaudeSettings();
+  const alreadyHasHook =
+    !!settings?.hooks &&
+    (hasMatchingHook(settings.hooks.Stop, 'hookRunner.js') || hasMatchingHook(settings.hooks.UserPromptSubmit, 'resumeRunner.js'));
+
+  await context.globalState.update(HAS_PROMPTED_SETUP_KEY, true);
+
+  if (alreadyHasHook) {
+    return;
+  }
+
+  const setUpLabel = 'Set Up Hook';
+  const choice = await vscode.window.showInformationMessage(
+    'Pause on Done can automatically pause your music when Claude Code finishes responding, and resume it when you reply. Set up the Claude Code hook now?',
+    setUpLabel,
+    'Not Now'
+  );
+
+  if (choice !== setUpLabel) {
+    outputChannel.appendLine(
+      '[Pause on Done] Declined the first-run Claude Code hook setup prompt — can set it up later via "Pause on Done: Set Up Claude Code Hook"'
+    );
+    return;
+  }
 
   try {
-    writeClaudeSettings(settings);
-    outputChannel.appendLine(`[Pause on Done] Wrote Claude Code hooks to ${CLAUDE_SETTINGS_PATH}`);
+    await writeHookEntries(context, outputChannel);
     void vscode.window.showInformationMessage(
       'Pause on Done: Claude Code hook set up. Start a new `claude` session for it to take effect.'
     );

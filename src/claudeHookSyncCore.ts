@@ -162,3 +162,15 @@ export function removeHook(hooks: Record<string, HookGroup[] | undefined>, event
 
   return changed;
 }
+
+/**
+ * Checks whether a hook entry identifiable as ours (by scriptName appearing in its command)
+ * already exists among the given groups. Used to decide whether the first-run setup prompt
+ * needs to offer anything, or whether a hook is already configured.
+ */
+export function hasMatchingHook(groups: HookGroup[] | undefined, scriptName: string): boolean {
+  if (!groups) {
+    return false;
+  }
+  return groups.some((group) => group.hooks.some((hook) => hook.type === 'command' && hook.command.includes(scriptName)));
+}

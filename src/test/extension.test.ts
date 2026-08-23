@@ -44,6 +44,7 @@ describe('Extension activation', () => {
     assert.strictEqual(config.get('soundFile'), 'bell_sound.wav');
     assert.strictEqual(config.get('cooldownSeconds'), 5);
     assert.strictEqual(config.get('autoPromptInstallDependencies'), true);
+    assert.strictEqual(config.get('autoPromptSetupClaudeHook'), true);
     assert.deepStrictEqual(config.get('completionKeywords'), [
       'Done',
       'Process finished',

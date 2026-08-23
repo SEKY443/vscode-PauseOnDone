@@ -3,7 +3,7 @@ import { resetCooldown } from './completionDetector';
 import { setExtensionRootPath, handleTaskCompletion } from './mediaControl';
 import { checkAndPromptInstall } from './dependencyInstaller';
 import { startWatchingTerminals } from './terminalWatcher';
-import { syncClaudeHookPaths, setupClaudeHook, removeClaudeHook } from './claudeHookSync';
+import { syncClaudeHookPaths, setupClaudeHook, removeClaudeHook, promptToSetupClaudeHookIfMissing } from './claudeHookSync';
 
 let outputChannel: vscode.OutputChannel;
 
@@ -70,6 +70,11 @@ export function activate(context: vscode.ExtensionContext): void {
   // absolute path baked into ~/.claude/settings.json would otherwise silently go stale on every
   // update (see claudeHookSync.ts for details). Never adds a hook that wasn't already there.
   syncClaudeHookPaths(context, outputChannel);
+
+  // First-run only: if no Claude Code hook is configured yet, proactively ask whether to set one
+  // up (same pattern as checkAndPromptInstall above) rather than leaving it undiscoverable behind
+  // a Command Palette entry. Still requires an explicit click before writing anything.
+  void promptToSetupClaudeHookIfMissing(context, outputChannel);
 }
 
 export function deactivate(): void {

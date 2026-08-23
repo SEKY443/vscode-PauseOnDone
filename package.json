@@ -1,8 +1,8 @@
 {
-  "name": "pause-on-done",
-  "displayName": "Pause on Done",
+  "name": "vscode-pause-on-done",
+  "displayName": "PauseOnDone for VSCode",
   "description": "Automatically pauses background music when an AI or script finishes a task; plays a local notification sound if nothing was playing.",
-  "version": "0.1.0",
+  "version": "0.1.2",
   "publisher": "SEKY443",
   "license": "MIT",
   "repository": {
@@ -72,6 +72,11 @@
           "type": "boolean",
           "default": true,
           "description": "On first activation, if the platform's recommended media control tool is missing (macOS: nowplaying-cli / Linux: playerctl), show a notification asking whether to open a terminal and install it. Only shows a prompt — the install command only runs if you click the button."
+        },
+        "pauseOnDone.autoPromptSetupClaudeHook": {
+          "type": "boolean",
+          "default": true,
+          "description": "On first activation, if no Claude Code hook is configured yet, show a one-time notification offering to set it up. Only shows a prompt — nothing is written to ~/.claude/settings.json unless you click the button. Can also be set up later via \"Pause on Done: Set Up Claude Code Hook\"."
         },
         "pauseOnDone.debugLogRawOutput": {
           "type": "boolean",
