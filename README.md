@@ -3,11 +3,21 @@
 Automatically pauses your background music when an AI coding tool or script finishes a task, and resumes it once you get back to it. If nothing was playing, it plays a short local notification sound instead.
 
 Repository: https://github.com/SEKY443/vscode-PauseOnDone
+
 Marketplace: https://marketplace.visualstudio.com/items?itemName=SEKY443.vscode-pause-on-done
+
+
+> **Note & Troubleshooting:**
+> If it doesn't start automatically, please open the Command Palette (Mac: `Cmd` + `Shift` + `P` | Windows/Linux: `Ctrl` + `Shift` + `P`), type `pause on done`, manually select **Set up hook** or **Install dependencies**. 
+> 
+> **Fun Fact:** This hook works with Claude globally across your system! For example, once you set it up in VS Code, it will also trigger perfectly when using Claude in other environments like Android Studio.
+> 
+> *Currently, this tool has only been tested with Claude on macOS. If you encounter any issues, please feel free to open an issue!*
+
 
 ## Backstory
 
-I got inspired while working on a project. I was making an Android app with a music player, and I was using it to listen to music while developing a new version. When I was debugging and pushed the app update to my phone, the music stopped due to the APK installation — that's when I knew I could start testing.
+I was making an Android app with a music player, and I was using it to listen to podcast while developing a new version. When I was debugging and pushed the app update to my phone, the music stopped due to the APK installation — that's when I knew I could start testing on my phone.
 
 Maybe this logic could be useful for AI too, so I tried it with Claude Code, and I really liked the result. I added a feature to automatically resume playback — and if no music is playing, it'll just play a typewriter "ding" sound. Now you've got more time to scroll on your phone, haven't you?
 
