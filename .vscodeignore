@@ -1,0 +1,10 @@
+.vscode/**
+.vscode-test/**
+.vscode-test.mjs
+src/**
+out/test/**
+.gitignore
+tsconfig.json
+**/*.map
+node_modules/**
+!node_modules/play-sound/**

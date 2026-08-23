@@ -1,0 +1,120 @@
+{
+  "name": "pause-on-done",
+  "displayName": "Pause on Done",
+  "description": "Automatically pauses background music when an AI or script finishes a task; plays a local notification sound if nothing was playing.",
+  "version": "0.1.0",
+  "publisher": "SEKY443",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/SEKY443/vscode-PauseOnDone"
+  },
+  "bugs": {
+    "url": "https://github.com/SEKY443/vscode-PauseOnDone/issues"
+  },
+  "engines": {
+    "vscode": "^1.93.0"
+  },
+  "categories": [
+    "Other"
+  ],
+  "keywords": [
+    "music",
+    "spotify",
+    "media control",
+    "claude code",
+    "ai",
+    "productivity"
+  ],
+  "activationEvents": [
+    "onStartupFinished"
+  ],
+  "main": "./out/extension.js",
+  "contributes": {
+    "configuration": {
+      "title": "Pause on Done",
+      "properties": {
+        "pauseOnDone.enabled": {
+          "type": "boolean",
+          "default": true,
+          "description": "Enable the \"pause music on task completion\" feature."
+        },
+        "pauseOnDone.completionKeywords": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          },
+          "default": [
+            "Done",
+            "Process finished",
+            "Success",
+            "BUILD SUCCESSFUL"
+          ],
+          "description": "Custom keywords used to detect task completion in terminal output (case-insensitive, substring match)."
+        },
+        "pauseOnDone.enableAiSignalDetection": {
+          "type": "boolean",
+          "default": true,
+          "description": "Enable built-in AI/script completion signal detection, including the \"word + for + duration\" pattern (e.g. Claude Code / Cursor status lines like \"Done for 5s\", \"Thought for 1m 3s\", \"Compacted for 12s\") plus common words like done / completed / finished / success."
+        },
+        "pauseOnDone.soundFile": {
+          "type": "string",
+          "default": "bell_sound.wav",
+          "description": "Path to the sound file to play when no music is currently playing. Can be relative to the extension's install directory, or an absolute path."
+        },
+        "pauseOnDone.cooldownSeconds": {
+          "type": "number",
+          "default": 5,
+          "minimum": 0,
+          "description": "Cooldown period in seconds after a trigger, to avoid the same burst of terminal output triggering media control repeatedly."
+        },
+        "pauseOnDone.autoPromptInstallDependencies": {
+          "type": "boolean",
+          "default": true,
+          "description": "On first activation, if the platform's recommended media control tool is missing (macOS: nowplaying-cli / Linux: playerctl), show a notification asking whether to open a terminal and install it. Only shows a prompt — the install command only runs if you click the button."
+        },
+        "pauseOnDone.debugLogRawOutput": {
+          "type": "boolean",
+          "default": false,
+          "description": "Debug option: print raw terminal output (including ANSI escape codes) received by this extension to the \"Pause on Done\" Output channel, to help verify the actual output content when tuning keywords/regex. Recommended to leave off in normal use to avoid flooding the Output panel."
+        }
+      }
+    },
+    "commands": [
+      {
+        "command": "pauseOnDone.testTrigger",
+        "title": "Pause on Done: Manual Test Trigger"
+      },
+      {
+        "command": "pauseOnDone.checkDependencies",
+        "title": "Pause on Done: Check and Install Dependencies"
+      },
+      {
+        "command": "pauseOnDone.setupClaudeHook",
+        "title": "Pause on Done: Set Up Claude Code Hook"
+      },
+      {
+        "command": "pauseOnDone.removeClaudeHook",
+        "title": "Pause on Done: Remove Claude Code Hook"
+      }
+    ]
+  },
+  "scripts": {
+    "vscode:prepublish": "npm run compile",
+    "compile": "tsc -p ./",
+    "watch": "tsc -watch -p ./",
+    "pretest": "npm run compile",
+    "test": "vscode-test"
+  },
+  "devDependencies": {
+    "@types/mocha": "^10.0.7",
+    "@types/node": "^20.14.0",
+    "@types/vscode": "^1.93.0",
+    "@vscode/test-cli": "^0.0.15",
+    "@vscode/test-electron": "^3.1.0",
+    "typescript": "^5.5.0"
+  },
+  "dependencies": {
+    "play-sound": "^1.1.6"
+  }
+}
