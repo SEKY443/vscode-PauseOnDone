@@ -2,7 +2,7 @@
   "name": "vscode-pause-on-done",
   "displayName": "PauseOnDone for VSCode",
   "description": "Automatically pauses background music when an AI or script finishes a task; plays a local notification sound if nothing was playing.",
-  "version": "0.1.2",
+  "version": "0.1.4",
   "publisher": "SEKY443",
   "license": "MIT",
   "repository": {
@@ -61,6 +61,21 @@
           "type": "string",
           "default": "bell_sound.wav",
           "description": "Path to the sound file to play when no music is currently playing. Can be relative to the extension's install directory, or an absolute path."
+        },
+        "pauseOnDone.pauseMusic": {
+          "type": "boolean",
+          "default": true,
+          "description": "Whether to pause currently-playing music on task completion. If disabled, the notification sound plays instead (subject to pauseOnDone.playNotificationSound), regardless of whether music is playing — i.e. \"don't pause, just ring\" mode."
+        },
+        "pauseOnDone.playNotificationSound": {
+          "type": "boolean",
+          "default": true,
+          "description": "Whether to play the notification sound when there's nothing to pause (either no music is playing, or pauseOnDone.pauseMusic is disabled). If disabled, nothing happens in that case — i.e. \"don't ring, just pause\" mode."
+        },
+        "pauseOnDone.autoResume": {
+          "type": "boolean",
+          "default": true,
+          "description": "Whether to automatically resume music the next time you send a message to Claude Code, if this tool paused it. Only affects the Claude Code hook integration — set to false to leave music paused until you resume it yourself."
         },
         "pauseOnDone.cooldownSeconds": {
           "type": "number",

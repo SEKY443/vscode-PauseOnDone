@@ -38,6 +38,18 @@ function writeState(state: PersistedState): void {
   }
 }
 
+export interface CompletionOptions {
+  /** Whether to send a pause command when music is playing. If false, the notification sound plays instead (subject to playNotificationSound), regardless of playback state. */
+  pauseMusic: boolean;
+  /** Whether to play the notification sound when there's nothing to pause (either nothing is playing, or pauseMusic is disabled). If false, nothing happens in that case. */
+  playNotificationSound: boolean;
+}
+
+export const DEFAULT_COMPLETION_OPTIONS: CompletionOptions = {
+  pauseMusic: true,
+  playNotificationSound: true,
+};
+
 /**
  * Pure Node logic (no vscode API dependency), so it can be shared by both:
  * - The VS Code extension itself (mediaControl.ts is a thin wrapper that reads vscode settings
@@ -48,21 +60,31 @@ function writeState(state: PersistedState): void {
  *
  * Main flow on task completion:
  * 1. Check whether the system currently has music/media playing
- * 2. [Case A] Playing -> send a pause command, and record "we paused it"
- * 3. [Case B] Not playing, but we were the one who paused it last time and it hasn't been resumed
- *    yet -> the music is simply still in the paused state we left it in; don't notify again
- *    (avoids dinging on every single turn)
- * 4. [Case C] Not playing, and it wasn't us who paused it -> genuinely no music was playing, so
- *    play the notification sound
+ * 2. [Case A] Playing, and pauseMusic is enabled -> send a pause command, and record "we paused it"
+ * 3. [Case B] Otherwise (nothing playing, or pauseMusic is disabled) — if playNotificationSound is
+ *    disabled, do nothing. Otherwise:
+ *    - if we were the one who paused it last time and it hasn't been resumed yet, the music is
+ *      simply still in the paused state we left it in; don't notify again (avoids dinging on
+ *      every single turn)
+ *    - otherwise, play the notification sound
  */
-export async function handleTaskCompletion(soundFilePath: string, log: Logger): Promise<void> {
+export async function handleTaskCompletion(
+  soundFilePath: string,
+  options: CompletionOptions,
+  log: Logger
+): Promise<void> {
   try {
     const playing = await isMediaPlaying();
 
-    if (playing) {
+    if (options.pauseMusic && playing) {
       log('Detected music playing -> sending pause command');
       await pauseMedia();
       writeState({ pausedByUs: true });
+      return;
+    }
+
+    if (!options.playNotificationSound) {
+      log('Notification sound is disabled -> nothing to do');
       return;
     }
 
@@ -71,7 +93,11 @@ export async function handleTaskCompletion(soundFilePath: string, log: Logger): 
       return;
     }
 
-    log('No music currently playing -> playing the notification sound instead');
+    log(
+      playing
+        ? 'Music is playing but pausing is disabled -> playing the notification sound instead'
+        : 'No music currently playing -> playing the notification sound instead'
+    );
     writeState({ pausedByUs: false });
     await playLocalSound(soundFilePath, log);
   } catch (err) {
@@ -130,12 +156,17 @@ export async function forceBell(soundFilePath: string, log: Logger): Promise<voi
 }
 
 /**
- * Called when the user sends their next message: only sends a resume command if we genuinely
- * paused the music last time. If last time we played the notification sound instead (meaning
- * there was no music to begin with), or the music wasn't paused by us, this does nothing —
- * avoids incorrect resume actions.
+ * Called when the user sends their next message: only sends a resume command if autoResume is
+ * enabled AND we genuinely paused the music last time. If last time we played the notification
+ * sound instead (meaning there was no music to begin with), or the music wasn't paused by us,
+ * this does nothing — avoids incorrect resume actions.
  */
-export async function resumeIfWePausedIt(log: Logger): Promise<void> {
+export async function resumeIfWePausedIt(autoResume: boolean, log: Logger): Promise<void> {
+  if (!autoResume) {
+    log('Auto-resume is disabled -> leaving music as-is');
+    return;
+  }
+
   const state = readState();
   if (!state.pausedByUs) {
     log('Music was not paused by this tool last time -> skipping auto-resume');

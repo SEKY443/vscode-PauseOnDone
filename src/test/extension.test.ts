@@ -42,6 +42,9 @@ describe('Extension activation', () => {
     assert.strictEqual(config.get('enabled'), true);
     assert.strictEqual(config.get('enableAiSignalDetection'), true);
     assert.strictEqual(config.get('soundFile'), 'bell_sound.wav');
+    assert.strictEqual(config.get('pauseMusic'), true);
+    assert.strictEqual(config.get('playNotificationSound'), true);
+    assert.strictEqual(config.get('autoResume'), true);
     assert.strictEqual(config.get('cooldownSeconds'), 5);
     assert.strictEqual(config.get('autoPromptInstallDependencies'), true);
     assert.strictEqual(config.get('autoPromptSetupClaudeHook'), true);

@@ -4,6 +4,7 @@ import { setExtensionRootPath, handleTaskCompletion } from './mediaControl';
 import { checkAndPromptInstall } from './dependencyInstaller';
 import { startWatchingTerminals } from './terminalWatcher';
 import { syncClaudeHookPaths, setupClaudeHook, removeClaudeHook, promptToSetupClaudeHookIfMissing } from './claudeHookSync';
+import { syncHookConfigFromSettings } from './hookConfig';
 
 let outputChannel: vscode.OutputChannel;
 
@@ -75,6 +76,18 @@ export function activate(context: vscode.ExtensionContext): void {
   // up (same pattern as checkAndPromptInstall above) rather than leaving it undiscoverable behind
   // a Command Palette entry. Still requires an explicit click before writing anything.
   void promptToSetupClaudeHookIfMissing(context, outputChannel);
+
+  // Snapshot the current pauseOnDone.* settings into ~/.pause-on-done/config.json, so the
+  // standalone hook scripts (which have no access to VS Code's settings at all) can honor them
+  // too — otherwise pauseMusic/playNotificationSound/autoResume/enabled would only affect the
+  // terminal-scanning path. Re-synced on every change so edits in Settings take effect right away.
+  syncHookConfigFromSettings(outputChannel);
+  const configChangeListener = vscode.workspace.onDidChangeConfiguration((event) => {
+    if (event.affectsConfiguration('pauseOnDone')) {
+      syncHookConfigFromSettings(outputChannel);
+    }
+  });
+  context.subscriptions.push(configChangeListener);
 }
 
 export function deactivate(): void {

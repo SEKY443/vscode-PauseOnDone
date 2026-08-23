@@ -76,6 +76,9 @@ Before uninstalling this extension, run **"Pause on Done: Remove Claude Code Hoo
 | `pauseOnDone.completionKeywords` | `["Done", "Process finished", "Success", "BUILD SUCCESSFUL"]` | Custom keywords to match in terminal output (case-insensitive, substring match) |
 | `pauseOnDone.enableAiSignalDetection` | `true` | Enable the built-in `word + for + duration` pattern and common completion words |
 | `pauseOnDone.soundFile` | `bell_sound.wav` | Path to the notification sound (relative to the extension's install dir, or absolute) |
+| `pauseOnDone.pauseMusic` | `true` | Whether to pause music on completion. Disable for "don't pause, just ring" mode — the notification sound plays instead, regardless of playback state |
+| `pauseOnDone.playNotificationSound` | `true` | Whether to play the notification sound when there's nothing to pause. Disable for "don't ring, just pause" mode — nothing happens when there's no music to pause |
+| `pauseOnDone.autoResume` | `true` | Whether to automatically resume music on your next message, if this tool paused it. Applies to the Claude Code hook integration |
 | `pauseOnDone.cooldownSeconds` | `5` | Minimum time between triggers, for the terminal-scanning path |
 | `pauseOnDone.autoPromptInstallDependencies` | `true` | Whether to show the first-run install prompt described above |
 | `pauseOnDone.debugLogRawOutput` | `false` | Logs raw terminal output to the Output panel, for tuning keywords/regex |
@@ -85,7 +88,7 @@ Before uninstalling this extension, run **"Pause on Done: Remove Claude Code Hoo
 - VS Code's Shell Integration API never fires for full-screen interactive programs (like `claude`) that take over the terminal — use the hook integration instead for those.
 - Windows support relies on a PowerShell/WinRT technique that hasn't been verified against a real Windows machine — it should work on Windows 10+, but if the WinRT call fails for any reason, detection reports "not playing" and control falls back to `nircmd`'s media-key toggle (which can't distinguish pause from resume).
 - The Claude Code hook integration requires starting a **new** `claude` session after setup — hooks are loaded once at session start.
-- `pauseOnDone.enabled` only controls the terminal-scanning path. The Claude Code hook is a separate standalone script with no access to VS Code's settings, so it keeps running even while `enabled` is off — that's intentional, since the hook is designed to keep working whether or not VS Code is even open. To disable it, run "Pause on Done: Remove Claude Code Hook" instead.
+- The Claude Code hook scripts have no direct access to VS Code's settings (they're standalone Node processes), so `pauseOnDone.enabled`/`pauseMusic`/`playNotificationSound`/`autoResume` reach them via a synced snapshot at `~/.pause-on-done/config.json`, written whenever the settings change while VS Code is running. If you change a setting while VS Code is closed, the hook won't see the new value until VS Code opens and re-syncs it. Fully removing the hook still requires "Pause on Done: Remove Claude Code Hook" — `pauseOnDone.enabled` pauses its behavior but doesn't unregister it from `~/.claude/settings.json`.
 
 ## License
 

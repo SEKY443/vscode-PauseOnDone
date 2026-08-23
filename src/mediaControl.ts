@@ -5,6 +5,7 @@ import {
   forceResume as coreForceResume,
   forceToggle as coreForceToggle,
   forceBell as coreForceBell,
+  CompletionOptions,
 } from './mediaControlCore';
 import { resolveSoundPath, Logger } from './soundPlayer';
 
@@ -28,13 +29,21 @@ function resolveConfiguredSoundPath(): string {
   return resolveSoundPath(soundFile, extensionRootPath);
 }
 
+function resolveConfiguredCompletionOptions(): CompletionOptions {
+  const config = vscode.workspace.getConfiguration('pauseOnDone');
+  return {
+    pauseMusic: config.get<boolean>('pauseMusic', true),
+    playNotificationSound: config.get<boolean>('playNotificationSound', true),
+  };
+}
+
 /**
- * Thin vscode-aware wrapper: reads the pauseOnDone.soundFile setting, resolves it to an absolute
- * path, and adapts vscode.OutputChannel into a plain Logger callback. All the real logic lives
- * in mediaControlCore.ts.
+ * Thin vscode-aware wrapper: reads the pauseOnDone.* settings, resolves the sound path to an
+ * absolute path, and adapts vscode.OutputChannel into a plain Logger callback. All the real
+ * logic lives in mediaControlCore.ts.
  */
 export async function handleTaskCompletion(outputChannel: vscode.OutputChannel): Promise<void> {
-  await coreHandleTaskCompletion(resolveConfiguredSoundPath(), toLogger(outputChannel));
+  await coreHandleTaskCompletion(resolveConfiguredSoundPath(), resolveConfiguredCompletionOptions(), toLogger(outputChannel));
 }
 
 /** Debug token !PODStop! — force-pause, regardless of current state. */
