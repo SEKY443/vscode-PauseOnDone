@@ -325,7 +325,27 @@ function Await($WinRtTask, $ResultType) {
 }
 [Windows.Media.Control.GlobalSystemMediaTransportControlsSessionManager,Windows.Media.Control,ContentType=WindowsRuntime] | Out-Null
 $sessionManager = Await ([Windows.Media.Control.GlobalSystemMediaTransportControlsSessionManager]::RequestAsync()) ([Windows.Media.Control.GlobalSystemMediaTransportControlsSessionManager])
-$session = $sessionManager.GetCurrentSession()
+
+# The "current" session (the one Windows itself guesses is most relevant) is often not the one
+# actually playing when several apps expose a media session at once (e.g. a paused Spotify plus a
+# playing browser tab). So instead of trusting GetCurrentSession() alone, this scans every session
+# for one matching the requested status, checking "current" first only as a tie-breaker preference.
+# PlaybackStatus is a WinRT enum: comparing its .ToString() against the status name (rather than
+# the previous "compare to the raw '4'" check) is required because PowerShell's Write-Output
+# serializes an enum value as its name (e.g. "Playing"), not its underlying integer.
+function Find-Session([string]$Status) {
+    if ($null -eq $sessionManager) { return $null }
+    $current = $sessionManager.GetCurrentSession()
+    if ($null -ne $current -and $current.GetPlaybackInfo().PlaybackStatus.ToString() -eq $Status) {
+        return $current
+    }
+    foreach ($s in $sessionManager.GetSessions()) {
+        if ($s.GetPlaybackInfo().PlaybackStatus.ToString() -eq $Status) {
+            return $s
+        }
+    }
+    return $null
+}
 `;
 
 async function runWindowsMediaScript(actionScript: string): Promise<string> {
@@ -334,7 +354,7 @@ async function runWindowsMediaScript(actionScript: string): Promise<string> {
   try {
     const { stdout } = await execAsync(
       `powershell.exe -NoProfile -NonInteractive -ExecutionPolicy Bypass -File "${scriptPath}"`,
-      { timeout: 5000 }
+      { timeout: 5000, windowsHide: true }
     );
     return stdout.trim();
   } finally {
@@ -349,12 +369,10 @@ async function runWindowsMediaScript(actionScript: string): Promise<string> {
 async function isMediaPlayingWindows(): Promise<boolean> {
   try {
     const output = await runWindowsMediaScript(`
-if ($null -eq $session) { Write-Output 'none'; exit }
-$info = $session.GetPlaybackInfo()
-Write-Output $info.PlaybackStatus
+$playing = Find-Session 'Playing'
+Write-Output ($(if ($null -ne $playing) { 'true' } else { 'false' }))
 `);
-    // GlobalSystemMediaTransportControlsSessionPlaybackStatus enum: 4 = Playing
-    return output === '4';
+    return output === 'true';
   } catch {
     return false;
   }
@@ -363,8 +381,9 @@ Write-Output $info.PlaybackStatus
 async function pauseMediaWindows(): Promise<void> {
   try {
     await runWindowsMediaScript(`
-if ($null -ne $session) {
-    Await ($session.TryPauseAsync()) ([bool]) | Out-Null
+$target = Find-Session 'Playing'
+if ($null -ne $target) {
+    Await ($target.TryPauseAsync()) ([bool]) | Out-Null
 }
 `);
     return;
@@ -384,8 +403,10 @@ if ($null -ne $session) {
 async function resumeMediaWindows(): Promise<void> {
   try {
     await runWindowsMediaScript(`
-if ($null -ne $session) {
-    Await ($session.TryPlayAsync()) ([bool]) | Out-Null
+$target = Find-Session 'Paused'
+if ($null -eq $target) { $target = $sessionManager.GetCurrentSession() }
+if ($null -ne $target) {
+    Await ($target.TryPlayAsync()) ([bool]) | Out-Null
 }
 `);
     return;

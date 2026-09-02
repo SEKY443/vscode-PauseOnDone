@@ -32,7 +32,7 @@ Maybe this logic could be useful for AI too, so I tried it with Claude Code, and
 
 - **macOS**: [`nowplaying-cli`](https://github.com/kirtan-shah/nowplaying-cli) is recommended (`brew install nowplaying-cli`). Without it, this falls back to checking Spotify/Music.app individually via AppleScript, which won't detect media playing in a browser.
 - **Linux**: [`playerctl`](https://github.com/altdesktop/playerctl) is recommended.
-- **Windows**: no extra install needed — detection and control use the built-in WinRT media session API (the same one Windows' own Now Playing overlay is built on) via PowerShell. [`nircmd`](https://www.nirsoft.net/utils/nircmd.html) on your `PATH` is only used as a fallback if that fails. **Not yet verified on a real Windows machine** — if you hit issues, please open an issue.
+- **Windows**: no extra install needed — detection and control use the built-in WinRT media session API (the same one Windows' own Now Playing overlay is built on) via PowerShell, and the notification sound plays via the built-in `System.Media.SoundPlayer` .NET class (also via PowerShell, running fully hidden — no window flashes on screen). [`nircmd`](https://www.nirsoft.net/utils/nircmd.html) on your `PATH` is only used as a fallback if the WinRT call fails. The notification sound must be a `.wav` file on Windows (a `SoundPlayer` limitation) — the default `bell_sound.wav` already is. **Not yet verified on a real Windows machine** — if you hit issues, please open an issue.
 
 On first activation, if the recommended tool for your platform is missing, the extension shows a one-time prompt offering to open a terminal and install it — nothing runs without you clicking the button.
 
@@ -87,6 +87,7 @@ Before uninstalling this extension, run **"Pause on Done: Remove Claude Code Hoo
 
 - VS Code's Shell Integration API never fires for full-screen interactive programs (like `claude`) that take over the terminal — use the hook integration instead for those.
 - Windows support relies on a PowerShell/WinRT technique that hasn't been verified against a real Windows machine — it should work on Windows 10+, but if the WinRT call fails for any reason, detection reports "not playing" and control falls back to `nircmd`'s media-key toggle (which can't distinguish pause from resume).
+- On Windows, the notification sound only supports `.wav` files (it's played via `System.Media.SoundPlayer`, which doesn't decode `.mp3` or other formats).
 - The Claude Code hook integration requires starting a **new** `claude` session after setup — hooks are loaded once at session start.
 - The Claude Code hook scripts have no direct access to VS Code's settings (they're standalone Node processes), so `pauseOnDone.enabled`/`pauseMusic`/`playNotificationSound`/`autoResume` reach them via a synced snapshot at `~/.pause-on-done/config.json`, written whenever the settings change while VS Code is running. If you change a setting while VS Code is closed, the hook won't see the new value until VS Code opens and re-syncs it. Fully removing the hook still requires "Pause on Done: Remove Claude Code Hook" — `pauseOnDone.enabled` pauses its behavior but doesn't unregister it from `~/.claude/settings.json`.
 
