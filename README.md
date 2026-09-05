@@ -86,6 +86,7 @@ Before uninstalling this extension, run **"Pause on Done: Remove Claude Code Hoo
 
 ## Known limitations
 
+- Updating this extension (via Marketplace auto-update or a manual `.vsix` re-install) doesn't take effect immediately — VS Code keeps running the old code already loaded into memory until the window is reloaded. This extension detects that and offers a one-click "Reload Window" prompt as soon as the update lands, so bug fixes and behavior changes actually apply.
 - VS Code's Shell Integration API never fires for full-screen interactive programs (like `claude`) that take over the terminal — use the hook integration instead for those.
 - Windows support relies on a PowerShell/WinRT technique that hasn't been verified against a real Windows machine — it should work on Windows 10+, but if the WinRT call fails for any reason, detection reports "not playing" and control falls back to `nircmd`'s media-key toggle (which can't distinguish pause from resume).
 - On Windows, the notification sound only supports `.wav` files (it's played via `System.Media.SoundPlayer`, which doesn't decode `.mp3` or other formats).

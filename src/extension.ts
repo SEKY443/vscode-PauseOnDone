@@ -5,6 +5,7 @@ import { checkAndPromptInstall } from './dependencyInstaller';
 import { startWatchingTerminals } from './terminalWatcher';
 import { syncClaudeHookPaths, setupClaudeHook, removeClaudeHook, promptToSetupClaudeHookIfMissing } from './claudeHookSync';
 import { syncHookConfigFromSettings } from './hookConfig';
+import { watchForPendingUpdate } from './updateNotifier';
 
 let outputChannel: vscode.OutputChannel;
 
@@ -22,6 +23,10 @@ export function activate(context: vscode.ExtensionContext): void {
   outputChannel = vscode.window.createOutputChannel('Pause on Done');
   context.subscriptions.push(outputChannel);
   outputChannel.appendLine('[Pause on Done] Extension activated');
+
+  // Notify the user (with a one-click reload) if a newer version gets installed on disk while
+  // this session keeps running the old code — see updateNotifier.ts for why a reload is required.
+  watchForPendingUpdate(context, outputChannel);
 
   // Record the extension's install path so relative soundFile settings can be resolved correctly
   setExtensionRootPath(context.extensionPath);

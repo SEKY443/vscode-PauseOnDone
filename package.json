@@ -2,7 +2,7 @@
   "name": "vscode-pause-on-done",
   "displayName": "PauseOnDone for VSCode",
   "description": "Automatically pauses background music when an AI or script finishes a task; plays a local notification sound if nothing was playing.",
-  "version": "0.1.7",
+  "version": "0.1.8",
   "publisher": "SEKY443",
   "license": "MIT",
   "repository": {
