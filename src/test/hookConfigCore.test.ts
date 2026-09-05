@@ -20,7 +20,13 @@ describe('readHookConfig', () => {
 
   it('round-trips a fully-specified config through a real file', () => {
     const tmpPath = path.join(fs.mkdtempSync(path.join(os.tmpdir(), 'pause-on-done-hookconfig-test-')), 'config.json');
-    const written: HookConfig = { enabled: true, pauseMusic: false, playNotificationSound: true, autoResume: false };
+    const written: HookConfig = {
+      enabled: true,
+      pauseMusic: false,
+      playNotificationSound: true,
+      ringWhenPausing: false,
+      autoResume: false,
+    };
 
     writeHookConfig(written, tmpPath);
     const readBack = readHookConfig(tmpPath);
@@ -37,6 +43,7 @@ describe('readHookConfig', () => {
       enabled: true,
       pauseMusic: false,
       playNotificationSound: true,
+      ringWhenPausing: true,
       autoResume: true,
     });
   });

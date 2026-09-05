@@ -43,11 +43,19 @@ export interface CompletionOptions {
   pauseMusic: boolean;
   /** Whether to play the notification sound when there's nothing to pause (either nothing is playing, or pauseMusic is disabled). If false, nothing happens in that case. */
   playNotificationSound: boolean;
+  /**
+   * Whether to also play the notification sound right after pausing playing music (subject to
+   * playNotificationSound). If false, pausing happens silently instead — the classic "pause
+   * without ringing" behavior, with the notification sound reserved for when there was nothing to
+   * pause in the first place.
+   */
+  ringWhenPausing: boolean;
 }
 
 export const DEFAULT_COMPLETION_OPTIONS: CompletionOptions = {
   pauseMusic: true,
   playNotificationSound: true,
+  ringWhenPausing: true,
 };
 
 /**
@@ -60,7 +68,9 @@ export const DEFAULT_COMPLETION_OPTIONS: CompletionOptions = {
  *
  * Main flow on task completion:
  * 1. Check whether the system currently has music/media playing
- * 2. [Case A] Playing, and pauseMusic is enabled -> send a pause command, and record "we paused it"
+ * 2. [Case A] Playing, and pauseMusic is enabled -> send a pause command, record "we paused it",
+ *    then (if ringWhenPausing and playNotificationSound are both enabled) also play the
+ *    notification sound, so completion is noticeable even while you're away from the screen.
  * 3. [Case B] Otherwise (nothing playing, or pauseMusic is disabled) — if playNotificationSound is
  *    disabled, do nothing. Otherwise:
  *    - if we were the one who paused it last time and it hasn't been resumed yet, the music is
@@ -80,6 +90,11 @@ export async function handleTaskCompletion(
       log('Detected music playing -> sending pause command');
       await pauseMedia();
       writeState({ pausedByUs: true });
+
+      if (options.playNotificationSound && options.ringWhenPausing) {
+        log('Also playing the notification sound after pausing');
+        await playLocalSound(soundFilePath, log);
+      }
       return;
     }
 

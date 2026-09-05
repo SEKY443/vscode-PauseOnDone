@@ -17,6 +17,7 @@ export interface HookConfig {
   enabled: boolean;
   pauseMusic: boolean;
   playNotificationSound: boolean;
+  ringWhenPausing: boolean;
   autoResume: boolean;
 }
 
@@ -24,6 +25,7 @@ export const DEFAULT_HOOK_CONFIG: HookConfig = {
   enabled: true,
   pauseMusic: true,
   playNotificationSound: true,
+  ringWhenPausing: true,
   autoResume: true,
 };
 
@@ -40,6 +42,7 @@ export function readHookConfig(configPath: string = HOOK_CONFIG_PATH): HookConfi
       enabled: parsed.enabled !== false,
       pauseMusic: parsed.pauseMusic !== false,
       playNotificationSound: parsed.playNotificationSound !== false,
+      ringWhenPausing: parsed.ringWhenPausing !== false,
       autoResume: parsed.autoResume !== false,
     };
   } catch {

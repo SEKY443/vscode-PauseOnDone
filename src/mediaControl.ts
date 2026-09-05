@@ -34,6 +34,7 @@ function resolveConfiguredCompletionOptions(): CompletionOptions {
   return {
     pauseMusic: config.get<boolean>('pauseMusic', true),
     playNotificationSound: config.get<boolean>('playNotificationSound', true),
+    ringWhenPausing: config.get<boolean>('ringWhenPausing', true),
   };
 }
 

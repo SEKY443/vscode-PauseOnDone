@@ -2,7 +2,7 @@
   "name": "vscode-pause-on-done",
   "displayName": "PauseOnDone for VSCode",
   "description": "Automatically pauses background music when an AI or script finishes a task; plays a local notification sound if nothing was playing.",
-  "version": "0.1.6",
+  "version": "0.1.7",
   "publisher": "SEKY443",
   "license": "MIT",
   "repository": {
@@ -72,6 +72,11 @@
           "type": "boolean",
           "default": true,
           "description": "Whether to play the notification sound when there's nothing to pause (either no music is playing, or pauseOnDone.pauseMusic is disabled). If disabled, nothing happens in that case — i.e. \"don't ring, just pause\" mode."
+        },
+        "pauseOnDone.ringWhenPausing": {
+          "type": "boolean",
+          "default": true,
+          "description": "Whether to also play the notification sound right after pausing music that was playing (subject to pauseOnDone.playNotificationSound). If disabled, pausing happens silently instead — i.e. \"pause without ringing\" mode, with the notification sound reserved for when there was nothing to pause in the first place."
         },
         "pauseOnDone.autoResume": {
           "type": "boolean",

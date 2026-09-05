@@ -36,7 +36,11 @@ void (async () => {
 
   await handleTaskCompletion(
     soundFilePath,
-    { pauseMusic: hookConfig.pauseMusic, playNotificationSound: hookConfig.playNotificationSound },
+    {
+      pauseMusic: hookConfig.pauseMusic,
+      playNotificationSound: hookConfig.playNotificationSound,
+      ringWhenPausing: hookConfig.ringWhenPausing,
+    },
     log
   );
 

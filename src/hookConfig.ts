@@ -13,6 +13,7 @@ export function syncHookConfigFromSettings(outputChannel: vscode.OutputChannel):
     enabled: config.get<boolean>('enabled', true),
     pauseMusic: config.get<boolean>('pauseMusic', true),
     playNotificationSound: config.get<boolean>('playNotificationSound', true),
+    ringWhenPausing: config.get<boolean>('ringWhenPausing', true),
     autoResume: config.get<boolean>('autoResume', true),
   };
 
