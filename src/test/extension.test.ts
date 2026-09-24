@@ -45,6 +45,11 @@ describe('Extension activation', () => {
     assert.strictEqual(config.get('pauseMusic'), true);
     assert.strictEqual(config.get('playNotificationSound'), true);
     assert.strictEqual(config.get('ringWhenPausing'), true);
+    assert.strictEqual(config.get('overnightMode.enabled'), false);
+    assert.strictEqual(config.get('overnightMode.startTime'), '22:00');
+    assert.strictEqual(config.get('overnightMode.endTime'), '07:00');
+    assert.strictEqual(config.get('overnightMode.behavior'), 'ringOnly');
+    assert.strictEqual(config.get('overnightMode.autoResumeDelaySeconds'), 10);
     assert.strictEqual(config.get('autoResume'), true);
     assert.strictEqual(config.get('cooldownSeconds'), 5);
     assert.strictEqual(config.get('autoPromptInstallDependencies'), true);

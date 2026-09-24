@@ -2,6 +2,7 @@ import * as path from 'path';
 import { handleTaskCompletion } from './mediaControlCore';
 import { resolveSoundPath } from './soundPlayer';
 import { readHookConfig } from './hookConfigCore';
+import { applyOvernightMode } from './overnightModeCore';
 
 /**
  * Standalone entry point with no VS Code dependency, called directly by AI CLI tools' official
@@ -34,15 +35,16 @@ void (async () => {
   const extensionRoot = path.join(__dirname, '..');
   const soundFilePath = resolveSoundPath('bell_sound.wav', extensionRoot);
 
-  await handleTaskCompletion(
-    soundFilePath,
+  const completionOptions = applyOvernightMode(
     {
       pauseMusic: hookConfig.pauseMusic,
       playNotificationSound: hookConfig.playNotificationSound,
       ringWhenPausing: hookConfig.ringWhenPausing,
     },
-    log
+    hookConfig.overnightMode
   );
+
+  await handleTaskCompletion(soundFilePath, completionOptions, log);
 
   process.exit(0);
 })();

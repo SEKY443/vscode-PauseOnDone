@@ -1,5 +1,21 @@
 import * as vscode from 'vscode';
 import { HookConfig, writeHookConfig } from './hookConfigCore';
+import { OvernightModeBehavior, OvernightModeConfig } from './overnightModeCore';
+
+/**
+ * Reads the pauseOnDone.overnightMode.* settings into an OvernightModeConfig. Shared by
+ * syncHookConfigFromSettings below and mediaControl.ts's own resolveConfiguredCompletionOptions,
+ * so the terminal-scanning path and the Claude Code hook path apply Overnight Mode identically.
+ */
+export function readOvernightModeConfig(config: vscode.WorkspaceConfiguration): OvernightModeConfig {
+  return {
+    enabled: config.get<boolean>('overnightMode.enabled', false),
+    startTime: config.get<string>('overnightMode.startTime', '22:00'),
+    endTime: config.get<string>('overnightMode.endTime', '07:00'),
+    behavior: config.get<OvernightModeBehavior>('overnightMode.behavior', 'ringOnly'),
+    autoResumeDelaySeconds: config.get<number>('overnightMode.autoResumeDelaySeconds', 10),
+  };
+}
 
 /**
  * Snapshots the current pauseOnDone.* settings into ~/.pause-on-done/config.json, so the
@@ -15,6 +31,7 @@ export function syncHookConfigFromSettings(outputChannel: vscode.OutputChannel):
     playNotificationSound: config.get<boolean>('playNotificationSound', true),
     ringWhenPausing: config.get<boolean>('ringWhenPausing', true),
     autoResume: config.get<boolean>('autoResume', true),
+    overnightMode: readOvernightModeConfig(config),
   };
 
   try {

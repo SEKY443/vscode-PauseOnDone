@@ -1,4 +1,4 @@
-import { exec } from 'child_process';
+import { exec, spawn } from 'child_process';
 import { promisify } from 'util';
 import * as fs from 'fs';
 import * as os from 'os';
@@ -50,6 +50,14 @@ export interface CompletionOptions {
    * pause in the first place.
    */
   ringWhenPausing: boolean;
+  /**
+   * If set and greater than 0, once this handler pauses playing music it also schedules an
+   * automatic resume after this many seconds, independent of the next Claude Code message —
+   * used by Overnight Mode's "pause, then auto-resume after a delay" behavior (see
+   * overnightModeCore.ts) instead of leaving music paused indefinitely overnight. Left unset for
+   * normal operation, where resuming is left to resumeIfWePausedIt on the next message.
+   */
+  overnightAutoResumeDelaySeconds?: number;
 }
 
 export const DEFAULT_COMPLETION_OPTIONS: CompletionOptions = {
@@ -95,6 +103,11 @@ export async function handleTaskCompletion(
         log('Also playing the notification sound after pausing');
         await playLocalSound(soundFilePath, log);
       }
+
+      if (options.overnightAutoResumeDelaySeconds && options.overnightAutoResumeDelaySeconds > 0) {
+        log(`Overnight Mode: scheduling auto-resume in ${options.overnightAutoResumeDelaySeconds}s`);
+        scheduleDelayedResume(options.overnightAutoResumeDelaySeconds, log);
+      }
       return;
     }
 
@@ -117,6 +130,31 @@ export async function handleTaskCompletion(
     await playLocalSound(soundFilePath, log);
   } catch (err) {
     log(`Error in media control flow: ${err}`);
+  }
+}
+
+/**
+ * Fires off delayedResumeRunner.js (compiled alongside this module) as a fully detached, unref'd
+ * child process, then returns immediately — used by Overnight Mode's "pause, then auto-resume
+ * after a delay" behavior. This deliberately does NOT just `await sleep(...)` inline here: this
+ * function runs inside the short-lived hookRunner.ts process invoked directly by Claude Code's
+ * Stop hook (subject to a hook timeout, currently 15s), so blocking that process for the delay
+ * would risk the hook being killed before it can resume, and would add real latency to every
+ * turn. Spawning a separate process lets hookRunner exit immediately while the resume still
+ * happens on schedule. process.execPath (rather than relying on a "node" PATH entry) ensures the
+ * exact same Node binary already running this process is reused, regardless of environment.
+ */
+function scheduleDelayedResume(delaySeconds: number, log: Logger): void {
+  try {
+    const scriptPath = path.join(__dirname, 'delayedResumeRunner.js');
+    const child = spawn(process.execPath, [scriptPath, String(delaySeconds)], {
+      detached: true,
+      stdio: 'ignore',
+      windowsHide: true,
+    });
+    child.unref();
+  } catch (err) {
+    log(`Failed to schedule Overnight Mode auto-resume: ${err}`);
   }
 }
 

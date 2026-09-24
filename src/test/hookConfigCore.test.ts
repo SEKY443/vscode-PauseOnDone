@@ -3,6 +3,7 @@ import * as fs from 'fs';
 import * as os from 'os';
 import * as path from 'path';
 import { DEFAULT_HOOK_CONFIG, HookConfig, readHookConfig, writeHookConfig } from '../hookConfigCore';
+import { DEFAULT_OVERNIGHT_MODE_CONFIG } from '../overnightModeCore';
 
 describe('readHookConfig', () => {
   it('returns all-enabled defaults when the file does not exist', () => {
@@ -26,6 +27,13 @@ describe('readHookConfig', () => {
       playNotificationSound: true,
       ringWhenPausing: false,
       autoResume: false,
+      overnightMode: {
+        enabled: true,
+        startTime: '23:30',
+        endTime: '06:15',
+        behavior: 'autoResumeAfterDelay',
+        autoResumeDelaySeconds: 30,
+      },
     };
 
     writeHookConfig(written, tmpPath);
@@ -45,7 +53,16 @@ describe('readHookConfig', () => {
       playNotificationSound: true,
       ringWhenPausing: true,
       autoResume: true,
+      overnightMode: DEFAULT_OVERNIGHT_MODE_CONFIG,
     });
+  });
+
+  it('treats a missing or malformed overnightMode as disabled (fails closed, not open)', () => {
+    const tmpPath = path.join(fs.mkdtempSync(path.join(os.tmpdir(), 'pause-on-done-hookconfig-test-')), 'config.json');
+    fs.writeFileSync(tmpPath, JSON.stringify({ overnightMode: { enabled: 'yes', autoResumeDelaySeconds: -5 } }));
+
+    const result = readHookConfig(tmpPath);
+    assert.deepStrictEqual(result.overnightMode, DEFAULT_OVERNIGHT_MODE_CONFIG);
   });
 
   it('creates the parent directory if it does not exist yet', () => {

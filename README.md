@@ -27,6 +27,7 @@ Maybe this logic could be useful for AI too, so I tried it with Claude Code, and
 - **Terminal keyword / AI signal detection** — for ordinary commands and scripts (not full-screen TUIs), watches terminal output via VS Code's Shell Integration API for a custom keyword list, or built-in patterns like `Done for 5s` / `Thought for 1m 3s` commonly seen in AI coding tool status lines.
 - **Smart media detection** — on macOS, uses [`nowplaying-cli`](https://github.com/kirtan-shah/nowplaying-cli) (falls back to AppleScript for Spotify/Music.app) to detect and control whatever's currently playing, including media playing in a browser. On Linux, uses `playerctl`. On Windows, uses the built-in WinRT media session API via PowerShell — no extra install needed.
 - **No repeated dinging** — if the music is already paused from an earlier trigger, it won't play the notification sound again on every subsequent completion.
+- **Overnight Mode** — during a time window you configure, skip the normal "stays paused until your next message" behavior, so an overnight run doesn't leave your music paused for hours. Choose between two behaviors: just ring without pausing at all, or pause-and-ring as usual but automatically resume after a short delay. See [Overnight Mode](#overnight-mode) below.
 
 ## Requirements
 
@@ -62,6 +63,18 @@ echo "!PODStop!"
 
 These only work through the terminal-scanning path (VS Code's Shell Integration), the same detection surface as keyword matching — they aren't observed in the Debug Console, other extensions' Output channels, or arbitrary log files.
 
+## Overnight Mode
+
+Normally, once this tool pauses your music it stays paused until you send your next message (`pauseOnDone.autoResume`). That's fine during the day, but if you kick off a long overnight run, your music can end up paused for hours with nobody there to resume it. Overnight Mode lets you configure a time window where a different behavior applies instead:
+
+1. Enable it with `pauseOnDone.overnightMode.enabled`.
+2. Set `pauseOnDone.overnightMode.startTime` / `pauseOnDone.overnightMode.endTime` (24-hour local time, e.g. `22:00` / `07:00`). The end time can be earlier than the start time to span midnight, or later for a same-day window.
+3. Pick `pauseOnDone.overnightMode.behavior`:
+   - **`ringOnly`** (default) — never sends a pause command during the window; just plays the notification sound, exactly like `pauseOnDone.pauseMusic: false` would.
+   - **`autoResumeAfterDelay`** — still pauses (and still rings immediately, per `pauseOnDone.ringWhenPausing`), but automatically resumes after `pauseOnDone.overnightMode.autoResumeDelaySeconds` (default 10s) instead of waiting for your next message. This delay is scheduled by a small detached background process, so it doesn't block or delay Claude Code's hook.
+
+Overnight Mode is evaluated using your system's local time and only affects the pausing behavior during the window — outside it, everything works exactly as configured by your other settings.
+
 ## Uninstalling
 
 Before uninstalling this extension, run **"Pause on Done: Remove Claude Code Hook"** from the Command Palette first. VS Code's own uninstall only removes the extension's own files — it has no way to know about (or clean up) the hook entries this extension wrote to `~/.claude/settings.json`. Skipping this step leaves Claude Code trying to run a hook command that points at a now-deleted file, which shows up as a hook error on every response.
@@ -80,6 +93,11 @@ Before uninstalling this extension, run **"Pause on Done: Remove Claude Code Hoo
 | `pauseOnDone.playNotificationSound` | `true` | Whether to play the notification sound when there's nothing to pause. Disable for "don't ring, just pause" mode — nothing happens when there's no music to pause |
 | `pauseOnDone.ringWhenPausing` | `true` | Whether to also play the notification sound right after pausing music that was playing. Disable for the classic "pause without ringing" mode — the notification sound is then reserved for when there was nothing to pause in the first place |
 | `pauseOnDone.autoResume` | `true` | Whether to automatically resume music on your next message, if this tool paused it. Applies to the Claude Code hook integration |
+| `pauseOnDone.overnightMode.enabled` | `false` | Enable [Overnight Mode](#overnight-mode) during the time window below |
+| `pauseOnDone.overnightMode.startTime` | `22:00` | Overnight Mode window start, 24-hour local time (`HH:mm`) |
+| `pauseOnDone.overnightMode.endTime` | `07:00` | Overnight Mode window end, 24-hour local time (`HH:mm`); can be earlier than the start time to span midnight |
+| `pauseOnDone.overnightMode.behavior` | `ringOnly` | `ringOnly` (never pause during the window) or `autoResumeAfterDelay` (pause and ring as usual, but auto-resume after a delay) |
+| `pauseOnDone.overnightMode.autoResumeDelaySeconds` | `10` | Only used when `behavior` is `autoResumeAfterDelay`: seconds to wait before auto-resuming |
 | `pauseOnDone.cooldownSeconds` | `5` | Minimum time between triggers, for the terminal-scanning path |
 | `pauseOnDone.autoPromptInstallDependencies` | `true` | Whether to show the first-run install prompt described above |
 | `pauseOnDone.debugLogRawOutput` | `false` | Logs raw terminal output to the Output panel, for tuning keywords/regex |
@@ -90,7 +108,7 @@ Before uninstalling this extension, run **"Pause on Done: Remove Claude Code Hoo
 - Windows support relies on a PowerShell/WinRT technique that hasn't been verified against a real Windows machine — it should work on Windows 10+, but if the WinRT call fails for any reason, detection reports "not playing" and control falls back to `nircmd`'s media-key toggle (which can't distinguish pause from resume).
 - On Windows, the notification sound only supports `.wav` files (it's played via `System.Media.SoundPlayer`, which doesn't decode `.mp3` or other formats).
 - The Claude Code hook integration requires starting a **new** `claude` session after setup — hooks are loaded once at session start.
-- The Claude Code hook scripts have no direct access to VS Code's settings (they're standalone Node processes), so `pauseOnDone.enabled`/`pauseMusic`/`playNotificationSound`/`ringWhenPausing`/`autoResume` reach them via a synced snapshot at `~/.pause-on-done/config.json`, written whenever the settings change while VS Code is running. If you change a setting while VS Code is closed, the hook won't see the new value until VS Code opens and re-syncs it. Fully removing the hook still requires "Pause on Done: Remove Claude Code Hook" — `pauseOnDone.enabled` pauses its behavior but doesn't unregister it from `~/.claude/settings.json`.
+- The Claude Code hook scripts have no direct access to VS Code's settings (they're standalone Node processes), so `pauseOnDone.enabled`/`pauseMusic`/`playNotificationSound`/`ringWhenPausing`/`autoResume`/`overnightMode.*` reach them via a synced snapshot at `~/.pause-on-done/config.json`, written whenever the settings change while VS Code is running. If you change a setting while VS Code is closed, the hook won't see the new value until VS Code opens and re-syncs it. Fully removing the hook still requires "Pause on Done: Remove Claude Code Hook" — `pauseOnDone.enabled` pauses its behavior but doesn't unregister it from `~/.claude/settings.json`.
 
 ## License
 

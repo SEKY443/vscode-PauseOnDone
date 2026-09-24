@@ -8,6 +8,8 @@ import {
   CompletionOptions,
 } from './mediaControlCore';
 import { resolveSoundPath, Logger } from './soundPlayer';
+import { readOvernightModeConfig } from './hookConfig';
+import { applyOvernightMode } from './overnightModeCore';
 
 let extensionRootPath = '';
 
@@ -31,11 +33,12 @@ function resolveConfiguredSoundPath(): string {
 
 function resolveConfiguredCompletionOptions(): CompletionOptions {
   const config = vscode.workspace.getConfiguration('pauseOnDone');
-  return {
+  const baseOptions: CompletionOptions = {
     pauseMusic: config.get<boolean>('pauseMusic', true),
     playNotificationSound: config.get<boolean>('playNotificationSound', true),
     ringWhenPausing: config.get<boolean>('ringWhenPausing', true),
   };
+  return applyOvernightMode(baseOptions, readOvernightModeConfig(config));
 }
 
 /**

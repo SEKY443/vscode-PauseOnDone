@@ -2,7 +2,7 @@
   "name": "vscode-pause-on-done",
   "displayName": "PauseOnDone for VSCode",
   "description": "Automatically pauses background music when an AI or script finishes a task; plays a local notification sound if nothing was playing.",
-  "version": "0.1.7",
+  "version": "0.1.8",
   "publisher": "SEKY443",
   "license": "MIT",
   "repository": {
@@ -82,6 +82,42 @@
           "type": "boolean",
           "default": true,
           "description": "Whether to automatically resume music the next time you send a message to Claude Code, if this tool paused it. Only affects the Claude Code hook integration — set to false to leave music paused until you resume it yourself."
+        },
+        "pauseOnDone.overnightMode.enabled": {
+          "type": "boolean",
+          "default": false,
+          "description": "Enable Overnight Mode: during the time window below, skip the normal indefinite pause (which otherwise waits for your next message to resume) and use the behavior configured in pauseOnDone.overnightMode.behavior instead."
+        },
+        "pauseOnDone.overnightMode.startTime": {
+          "type": "string",
+          "default": "22:00",
+          "pattern": "^([01]\\d|2[0-3]):[0-5]\\d$",
+          "patternErrorMessage": "Use 24-hour local time in HH:mm format, e.g. 22:00.",
+          "description": "Overnight Mode window start, in 24-hour local time (HH:mm). Can be later than the end time to span midnight, e.g. 22:00 -> 07:00."
+        },
+        "pauseOnDone.overnightMode.endTime": {
+          "type": "string",
+          "default": "07:00",
+          "pattern": "^([01]\\d|2[0-3]):[0-5]\\d$",
+          "patternErrorMessage": "Use 24-hour local time in HH:mm format, e.g. 07:00.",
+          "description": "Overnight Mode window end, in 24-hour local time (HH:mm). Can be earlier than the start time to span midnight, e.g. 22:00 -> 07:00."
+        },
+        "pauseOnDone.overnightMode.behavior": {
+          "type": "string",
+          "enum": ["ringOnly", "autoResumeAfterDelay"],
+          "enumDescriptions": [
+            "Never pause during the window — just play the notification sound, like pauseOnDone.pauseMusic: false would.",
+            "Still pause (and still ring immediately, per pauseOnDone.ringWhenPausing) but automatically resume after pauseOnDone.overnightMode.autoResumeDelaySeconds, instead of waiting for your next message."
+          ],
+          "default": "ringOnly",
+          "description": "What Overnight Mode does during its time window, once enabled."
+        },
+        "pauseOnDone.overnightMode.autoResumeDelaySeconds": {
+          "type": "number",
+          "default": 10,
+          "minimum": 1,
+          "maximum": 3600,
+          "description": "Only used when pauseOnDone.overnightMode.behavior is \"autoResumeAfterDelay\": how many seconds to wait before automatically resuming paused music, independent of pauseOnDone.autoResume or your next message."
         },
         "pauseOnDone.cooldownSeconds": {
           "type": "number",
