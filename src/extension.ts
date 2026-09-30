@@ -1,6 +1,6 @@
 import * as vscode from 'vscode';
 import { resetCooldown } from './completionDetector';
-import { setExtensionRootPath, handleTaskCompletion } from './mediaControl';
+import { setExtensionRootPath, handleTaskCompletion, triggerConfirmationAlert } from './mediaControl';
 import { checkAndPromptInstall } from './dependencyInstaller';
 import { startWatchingTerminals } from './terminalWatcher';
 import { syncClaudeHookPaths, setupClaudeHook, removeClaudeHook, promptToSetupClaudeHookIfMissing } from './claudeHookSync';
@@ -37,6 +37,15 @@ export function activate(context: vscode.ExtensionContext): void {
     void handleTaskCompletion(outputChannel);
   });
   context.subscriptions.push(testCommand);
+
+  // Manual test command for Confirmation Alert (see notificationRunner.ts): run "Pause on Done:
+  // Test Confirmation Alert" to hear the double-ring without needing a real Claude Code
+  // permission/idle notification. Always rings, regardless of pauseOnDone.confirmationAlert.enabled.
+  const testConfirmationAlertCommand = vscode.commands.registerCommand('pauseOnDone.testConfirmationAlert', () => {
+    outputChannel.appendLine('[Pause on Done] Manual confirmation alert test triggered');
+    void triggerConfirmationAlert(outputChannel);
+  });
+  context.subscriptions.push(testConfirmationAlertCommand);
 
   // Manual dependency re-check command: run "Pause on Done: Check and Install Dependencies" from the
   // Command Palette. Forces the prompt again even if it has already been shown before (forcePrompt = true).

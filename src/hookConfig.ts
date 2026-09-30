@@ -1,6 +1,13 @@
 import * as vscode from 'vscode';
-import { HookConfig, writeHookConfig } from './hookConfigCore';
+import { ConfirmationAlertConfig, HookConfig, writeHookConfig } from './hookConfigCore';
 import { OvernightModeBehavior, OvernightModeConfig } from './overnightModeCore';
+
+/** Reads the pauseOnDone.confirmationAlert.* settings into a ConfirmationAlertConfig. */
+export function readConfirmationAlertConfig(config: vscode.WorkspaceConfiguration): ConfirmationAlertConfig {
+  return {
+    enabled: config.get<boolean>('confirmationAlert.enabled', false),
+  };
+}
 
 /**
  * Reads the pauseOnDone.overnightMode.* settings into an OvernightModeConfig. Shared by
@@ -32,6 +39,7 @@ export function syncHookConfigFromSettings(outputChannel: vscode.OutputChannel):
     ringWhenPausing: config.get<boolean>('ringWhenPausing', true),
     autoResume: config.get<boolean>('autoResume', true),
     overnightMode: readOvernightModeConfig(config),
+    confirmationAlert: readConfirmationAlertConfig(config),
   };
 
   try {

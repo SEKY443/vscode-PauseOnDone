@@ -28,6 +28,7 @@ Maybe this logic could be useful for AI too, so I tried it with Claude Code, and
 - **Smart media detection** — on macOS, uses [`nowplaying-cli`](https://github.com/kirtan-shah/nowplaying-cli) (falls back to AppleScript for Spotify/Music.app) to detect and control whatever's currently playing, including media playing in a browser. On Linux, uses `playerctl`. On Windows, uses the built-in WinRT media session API via PowerShell — no extra install needed.
 - **No repeated dinging** — if the music is already paused from an earlier trigger, it won't play the notification sound again on every subsequent completion.
 - **Overnight Mode** — during a time window you configure, skip the normal "stays paused until your next message" behavior, so an overnight run doesn't leave your music paused for hours. Choose between two behaviors: just ring without pausing at all, or pause-and-ring as usual but automatically resume after a short delay. See [Overnight Mode](#overnight-mode) below.
+- **Confirmation Alert** (opt-in) — rings the notification sound twice in a row whenever Claude Code needs your attention: asking permission to use a tool (including exiting plan mode) or waiting idle for your next message. Useful if you step away while Claude is working through a plan or a permission prompt and want a distinct cue that it's stuck waiting on you, separate from the single ring used for a normal task completion. See [Confirmation Alert](#confirmation-alert) below.
 
 ## Requirements
 
@@ -41,7 +42,9 @@ On first activation, if the recommended tool for your platform is missing, the e
 
 This is the most reliable way to use this extension with Claude Code, since Claude Code's terminal UI can't be observed by VS Code's terminal APIs.
 
-On first activation, if no hook is configured yet, you'll get a one-time prompt offering to set it up — nothing is written until you click through it. You can also trigger it manually any time by running **"Pause on Done: Set Up Claude Code Hook"** from the Command Palette. Either way, it shows you exactly what will be added to `~/.claude/settings.json` before writing anything, and preserves any hooks you've already configured for other purposes.
+On first activation, if no hook is configured yet, you'll get a one-time prompt offering to set it up — nothing is written until you click through it. You can also trigger it manually any time by running **"Pause on Done: Set Up Claude Code Hook"** from the Command Palette. Either way, it shows you exactly what will be added to `~/.claude/settings.json` before writing anything (three hooks: `Stop`, `UserPromptSubmit`, and `Notification`), and preserves any hooks you've already configured for other purposes.
+
+If you set up the hook before `pauseOnDone.confirmationAlert.enabled` existed, re-run **"Pause on Done: Set Up Claude Code Hook"** once to add the new `Notification` hook — it's safe to run again; your existing `Stop`/`UserPromptSubmit` hooks are re-synced in place, not duplicated.
 
 The hook path is kept in sync automatically on every VS Code startup, so it keeps working even after this extension updates to a new version (each update moves to a new install directory).
 
@@ -75,9 +78,22 @@ Normally, once this tool pauses your music it stays paused until you send your n
 
 Overnight Mode is evaluated using your system's local time and only affects the pausing behavior during the window — outside it, everything works exactly as configured by your other settings.
 
+## Confirmation Alert
+
+Off by default. Enable it with `pauseOnDone.confirmationAlert.enabled` to ring the notification sound twice in a row whenever Claude Code needs your attention, using its `Notification` hook event:
+
+- **Permission prompts** — Claude needs your permission to use a tool, including exiting plan mode to run a plan you approved.
+- **Idle prompts** — Claude Code has been waiting idle for your next message for a while.
+
+This is intentionally separate from the completion flow: it never touches pause/resume state, it just plays `pauseOnDone.soundFile` twice with a short gap in between, so it's audibly distinct from the single ring used for a normal task completion. It also respects `pauseOnDone.playNotificationSound` — if you've turned notification sounds off entirely, Confirmation Alert stays silent too.
+
+You can hear it any time via **"Pause on Done: Test Confirmation Alert"** from the Command Palette, without needing a real Claude Code permission/idle event.
+
+Requires the `Notification` hook from [Setting up the Claude Code hook](#setting-up-the-claude-code-hook) above — re-run setup once if you configured the hook before this feature existed.
+
 ## Uninstalling
 
-Before uninstalling this extension, run **"Pause on Done: Remove Claude Code Hook"** from the Command Palette first. VS Code's own uninstall only removes the extension's own files — it has no way to know about (or clean up) the hook entries this extension wrote to `~/.claude/settings.json`. Skipping this step leaves Claude Code trying to run a hook command that points at a now-deleted file, which shows up as a hook error on every response.
+Before uninstalling this extension, run **"Pause on Done: Remove Claude Code Hook"** from the Command Palette first. VS Code's own uninstall only removes the extension's own files — it has no way to know about (or clean up) the hook entries (`Stop`, `UserPromptSubmit`, `Notification`) this extension wrote to `~/.claude/settings.json`. Skipping this step leaves Claude Code trying to run a hook command that points at a now-deleted file, which shows up as a hook error on every response.
 
 (This can't be done automatically when you click "Uninstall" in the Extensions view: VS Code calls `deactivate()` on every disable/reload/update too, not just on a true uninstall, so wiring the cleanup into `deactivate()` would incorrectly strip the hook every time VS Code merely restarts — defeating the whole point of a hook that's supposed to keep working even when VS Code isn't running.)
 
@@ -98,6 +114,7 @@ Before uninstalling this extension, run **"Pause on Done: Remove Claude Code Hoo
 | `pauseOnDone.overnightMode.endTime` | `07:00` | Overnight Mode window end, 24-hour local time (`HH:mm`); can be earlier than the start time to span midnight |
 | `pauseOnDone.overnightMode.behavior` | `ringOnly` | `ringOnly` (never pause during the window) or `autoResumeAfterDelay` (pause and ring as usual, but auto-resume after a delay) |
 | `pauseOnDone.overnightMode.autoResumeDelaySeconds` | `10` | Only used when `behavior` is `autoResumeAfterDelay`: seconds to wait before auto-resuming |
+| `pauseOnDone.confirmationAlert.enabled` | `false` | Enable [Confirmation Alert](#confirmation-alert): ring twice when Claude Code needs your permission or is waiting idle for input |
 | `pauseOnDone.cooldownSeconds` | `5` | Minimum time between triggers, for the terminal-scanning path |
 | `pauseOnDone.autoPromptInstallDependencies` | `true` | Whether to show the first-run install prompt described above |
 | `pauseOnDone.debugLogRawOutput` | `false` | Logs raw terminal output to the Output panel, for tuning keywords/regex |
@@ -108,7 +125,8 @@ Before uninstalling this extension, run **"Pause on Done: Remove Claude Code Hoo
 - Windows support relies on a PowerShell/WinRT technique that hasn't been verified against a real Windows machine — it should work on Windows 10+, but if the WinRT call fails for any reason, detection reports "not playing" and control falls back to `nircmd`'s media-key toggle (which can't distinguish pause from resume).
 - On Windows, the notification sound only supports `.wav` files (it's played via `System.Media.SoundPlayer`, which doesn't decode `.mp3` or other formats).
 - The Claude Code hook integration requires starting a **new** `claude` session after setup — hooks are loaded once at session start.
-- The Claude Code hook scripts have no direct access to VS Code's settings (they're standalone Node processes), so `pauseOnDone.enabled`/`pauseMusic`/`playNotificationSound`/`ringWhenPausing`/`autoResume`/`overnightMode.*` reach them via a synced snapshot at `~/.pause-on-done/config.json`, written whenever the settings change while VS Code is running. If you change a setting while VS Code is closed, the hook won't see the new value until VS Code opens and re-syncs it. Fully removing the hook still requires "Pause on Done: Remove Claude Code Hook" — `pauseOnDone.enabled` pauses its behavior but doesn't unregister it from `~/.claude/settings.json`.
+- Confirmation Alert relies on Claude Code's own `Notification` hook event and its `permission_prompt`/`idle_prompt` notification types — what exactly triggers each (e.g. how quickly `idle_prompt` fires) is controlled by Claude Code itself, not this extension, and could change in a future Claude Code release.
+- The Claude Code hook scripts have no direct access to VS Code's settings (they're standalone Node processes), so `pauseOnDone.enabled`/`pauseMusic`/`playNotificationSound`/`ringWhenPausing`/`autoResume`/`overnightMode.*`/`confirmationAlert.*` reach them via a synced snapshot at `~/.pause-on-done/config.json`, written whenever the settings change while VS Code is running. If you change a setting while VS Code is closed, the hook won't see the new value until VS Code opens and re-syncs it. Fully removing the hook still requires "Pause on Done: Remove Claude Code Hook" — `pauseOnDone.enabled` pauses its behavior but doesn't unregister it from `~/.claude/settings.json`.
 
 ## License
 

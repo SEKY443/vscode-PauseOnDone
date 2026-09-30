@@ -14,6 +14,14 @@ import { DEFAULT_OVERNIGHT_MODE_CONFIG, OvernightModeConfig } from './overnightM
  */
 export const HOOK_CONFIG_PATH = path.join(os.homedir(), '.pause-on-done', 'config.json');
 
+export interface ConfirmationAlertConfig {
+  enabled: boolean;
+}
+
+export const DEFAULT_CONFIRMATION_ALERT_CONFIG: ConfirmationAlertConfig = {
+  enabled: false,
+};
+
 export interface HookConfig {
   enabled: boolean;
   pauseMusic: boolean;
@@ -21,6 +29,7 @@ export interface HookConfig {
   ringWhenPausing: boolean;
   autoResume: boolean;
   overnightMode: OvernightModeConfig;
+  confirmationAlert: ConfirmationAlertConfig;
 }
 
 export const DEFAULT_HOOK_CONFIG: HookConfig = {
@@ -30,6 +39,7 @@ export const DEFAULT_HOOK_CONFIG: HookConfig = {
   ringWhenPausing: true,
   autoResume: true,
   overnightMode: DEFAULT_OVERNIGHT_MODE_CONFIG,
+  confirmationAlert: DEFAULT_CONFIRMATION_ALERT_CONFIG,
 };
 
 /**
@@ -37,17 +47,19 @@ export const DEFAULT_HOOK_CONFIG: HookConfig = {
  * unreadable, or malformed — so hook scripts keep working (matching the pre-existing behavior)
  * even before the VS Code extension has ever run to write this file, or if it's been deleted.
  *
- * Note the asymmetry for overnightMode.enabled: every other flag here fails OPEN (defaults to
- * true, preserving pre-existing behavior) on a missing/malformed value, but overnightMode.enabled
- * fails CLOSED (defaults to false). Overnight Mode changes default pause behavior only during a
- * specific time window, so a malformed config should never have it silently switch on — the safe
- * failure here is "behave normally", not "start suppressing pauses at arbitrary hours".
+ * Note the asymmetry for overnightMode.enabled and confirmationAlert.enabled: every other flag
+ * here fails OPEN (defaults to true, preserving pre-existing behavior) on a missing/malformed
+ * value, but these two fail CLOSED (default to false). Both change/add behavior beyond the
+ * pre-existing "pause on completion" feature, so a malformed config should never have either
+ * silently switch on — the safe failure is "behave like before this feature existed", not "start
+ * doing something new and unrequested".
  */
 export function readHookConfig(configPath: string = HOOK_CONFIG_PATH): HookConfig {
   try {
     const raw = fs.readFileSync(configPath, 'utf8');
     const parsed = JSON.parse(raw);
     const overnight = parsed.overnightMode ?? {};
+    const confirmationAlert = parsed.confirmationAlert ?? {};
     return {
       enabled: parsed.enabled !== false,
       pauseMusic: parsed.pauseMusic !== false,
@@ -63,6 +75,9 @@ export function readHookConfig(configPath: string = HOOK_CONFIG_PATH): HookConfi
           typeof overnight.autoResumeDelaySeconds === 'number' && overnight.autoResumeDelaySeconds > 0
             ? overnight.autoResumeDelaySeconds
             : DEFAULT_OVERNIGHT_MODE_CONFIG.autoResumeDelaySeconds,
+      },
+      confirmationAlert: {
+        enabled: confirmationAlert.enabled === true,
       },
     };
   } catch {

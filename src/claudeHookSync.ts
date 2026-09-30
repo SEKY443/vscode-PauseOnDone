@@ -15,6 +15,9 @@ import { STATE_FILE } from './mediaControlCore';
 
 const HAS_PROMPTED_SETUP_KEY = 'pauseOnDone.hasPromptedClaudeHookSetup';
 
+/** Matcher restricting the Notification hook to moments that actually need your attention — see notificationRunner.ts. */
+const NOTIFICATION_HOOK_MATCHER = 'permission_prompt|idle_prompt';
+
 /**
  * Called on every activation. Keeps a previously-configured Claude Code hook's path in sync with
  * this extension's current install location (see claudeHookSyncCore.ts for why that's needed).
@@ -28,8 +31,9 @@ export function syncClaudeHookPaths(context: vscode.ExtensionContext, outputChan
 
   const hookRunnerCommand = buildHookCommand(path.join(context.extensionPath, 'out', 'hookRunner.js'));
   const resumeRunnerCommand = buildHookCommand(path.join(context.extensionPath, 'out', 'resumeRunner.js'));
+  const notificationRunnerCommand = buildHookCommand(path.join(context.extensionPath, 'out', 'notificationRunner.js'));
 
-  const changed = syncHookPathsInSettings(settings, hookRunnerCommand, resumeRunnerCommand);
+  const changed = syncHookPathsInSettings(settings, hookRunnerCommand, resumeRunnerCommand, notificationRunnerCommand);
   if (!changed) {
     return;
   }
@@ -44,34 +48,42 @@ export function syncClaudeHookPaths(context: vscode.ExtensionContext, outputChan
   }
 }
 
-/** Actually writes the Stop + UserPromptSubmit hook entries. Shared by the explicit command and the first-run prompt below — the only difference between the two is how consent is asked for. */
+/** Actually writes the Stop + UserPromptSubmit + Notification hook entries. Shared by the explicit command and the first-run prompt below — the only difference between the two is how consent is asked for. */
 async function writeHookEntries(context: vscode.ExtensionContext, outputChannel: vscode.OutputChannel): Promise<void> {
   const hookRunnerCommand = buildHookCommand(path.join(context.extensionPath, 'out', 'hookRunner.js'));
   const resumeRunnerCommand = buildHookCommand(path.join(context.extensionPath, 'out', 'resumeRunner.js'));
+  const notificationRunnerCommand = buildHookCommand(path.join(context.extensionPath, 'out', 'notificationRunner.js'));
 
   const settings = readClaudeSettings() ?? {};
   settings.hooks = settings.hooks ?? {};
 
   upsertHook(settings.hooks, 'Stop', 'hookRunner.js', hookRunnerCommand);
   upsertHook(settings.hooks, 'UserPromptSubmit', 'resumeRunner.js', resumeRunnerCommand);
+  upsertHook(settings.hooks, 'Notification', 'notificationRunner.js', notificationRunnerCommand, 15, NOTIFICATION_HOOK_MATCHER);
 
   writeClaudeSettings(settings);
   outputChannel.appendLine(`[Pause on Done] Wrote Claude Code hooks to ${CLAUDE_SETTINGS_PATH}`);
 }
 
 /**
- * Explicit, user-triggered setup: adds (or re-syncs) the Stop + UserPromptSubmit hooks pointing
- * at this extension's current install path into ~/.claude/settings.json, after showing exactly
- * what will be written and getting confirmation. Preserves any other existing settings/hooks.
+ * Explicit, user-triggered setup: adds (or re-syncs) the Stop + UserPromptSubmit + Notification
+ * hooks pointing at this extension's current install path into ~/.claude/settings.json, after
+ * showing exactly what will be written and getting confirmation. Preserves any other existing
+ * settings/hooks. The Notification hook is always installed alongside the other two — whether it
+ * actually does anything is controlled at runtime by pauseOnDone.confirmationAlert.enabled (off by
+ * default), the same way pauseMusic/playNotificationSound already gate the Stop hook's behavior.
  */
 export async function setupClaudeHook(context: vscode.ExtensionContext, outputChannel: vscode.OutputChannel): Promise<void> {
   const hookRunnerCommand = buildHookCommand(path.join(context.extensionPath, 'out', 'hookRunner.js'));
   const resumeRunnerCommand = buildHookCommand(path.join(context.extensionPath, 'out', 'resumeRunner.js'));
+  const notificationRunnerCommand = buildHookCommand(path.join(context.extensionPath, 'out', 'notificationRunner.js'));
 
   const choice = await vscode.window.showInformationMessage(
-    `Pause on Done will add two hooks to ${CLAUDE_SETTINGS_PATH}:\n` +
+    `Pause on Done will add three hooks to ${CLAUDE_SETTINGS_PATH}:\n` +
       `- Stop -> ${hookRunnerCommand}\n` +
       `- UserPromptSubmit -> ${resumeRunnerCommand}\n` +
+      `- Notification (${NOTIFICATION_HOOK_MATCHER}) -> ${notificationRunnerCommand}\n` +
+      'The Notification hook only rings (off by default) if you enable pauseOnDone.confirmationAlert.enabled in Settings. ' +
       'Existing settings and any other hooks you already have configured will be preserved.',
     { modal: true },
     'Set Up Hook'
@@ -115,7 +127,9 @@ export async function promptToSetupClaudeHookIfMissing(
   const settings = readClaudeSettings();
   const alreadyHasHook =
     !!settings?.hooks &&
-    (hasMatchingHook(settings.hooks.Stop, 'hookRunner.js') || hasMatchingHook(settings.hooks.UserPromptSubmit, 'resumeRunner.js'));
+    (hasMatchingHook(settings.hooks.Stop, 'hookRunner.js') ||
+      hasMatchingHook(settings.hooks.UserPromptSubmit, 'resumeRunner.js') ||
+      hasMatchingHook(settings.hooks.Notification, 'notificationRunner.js'));
 
   await context.globalState.update(HAS_PROMPTED_SETUP_KEY, true);
 
@@ -150,8 +164,8 @@ export async function promptToSetupClaudeHookIfMissing(
 
 /**
  * Explicit, user-triggered teardown: the inverse of setupClaudeHook. Removes this extension's
- * Stop/UserPromptSubmit hook entries from ~/.claude/settings.json (leaving any other hooks
- * untouched) and deletes the leftover state file, after confirmation.
+ * Stop/UserPromptSubmit/Notification hook entries from ~/.claude/settings.json (leaving any other
+ * hooks untouched) and deletes the leftover state file, after confirmation.
  *
  * There's no reliable way to run this automatically when the extension is actually uninstalled —
  * VS Code calls deactivate() on every disable/reload/update too, not just on uninstall, so wiring
@@ -167,7 +181,7 @@ export async function removeClaudeHook(outputChannel: vscode.OutputChannel): Pro
   }
 
   const choice = await vscode.window.showInformationMessage(
-    `Pause on Done will remove its Stop and UserPromptSubmit hooks from ${CLAUDE_SETTINGS_PATH}. ` +
+    `Pause on Done will remove its Stop, UserPromptSubmit, and Notification hooks from ${CLAUDE_SETTINGS_PATH}. ` +
       'Any other hooks you have configured will be left untouched. Run this before uninstalling the extension.',
     { modal: true },
     'Remove Hook'
@@ -179,8 +193,9 @@ export async function removeClaudeHook(outputChannel: vscode.OutputChannel): Pro
 
   const removedStop = removeHook(settings.hooks, 'Stop', 'hookRunner.js');
   const removedResume = removeHook(settings.hooks, 'UserPromptSubmit', 'resumeRunner.js');
+  const removedNotification = removeHook(settings.hooks, 'Notification', 'notificationRunner.js');
 
-  if (!removedStop && !removedResume) {
+  if (!removedStop && !removedResume && !removedNotification) {
     void vscode.window.showInformationMessage('Pause on Done: no matching hook entries were found — nothing to remove.');
     return;
   }

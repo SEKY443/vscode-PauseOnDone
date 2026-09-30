@@ -59,6 +59,41 @@ describe('syncHookPathsInSettings', () => {
     const changed = syncHookPathsInSettings(settings, 'node "/x/hookRunner.js"', 'node "/x/resumeRunner.js"');
     assert.strictEqual(changed, false);
   });
+
+  it('rewrites a stale notificationRunner.js path when a 4th argument is given', () => {
+    const settings: ClaudeSettings = {
+      hooks: {
+        Notification: [
+          { matcher: 'permission_prompt|idle_prompt', hooks: [{ type: 'command', command: 'node "/old/out/notificationRunner.js"' }] },
+        ],
+      },
+    };
+
+    const changed = syncHookPathsInSettings(
+      settings,
+      'node "/new/out/hookRunner.js"',
+      'node "/new/out/resumeRunner.js"',
+      'node "/new/out/notificationRunner.js"'
+    );
+
+    assert.strictEqual(changed, true);
+    assert.strictEqual(settings.hooks!.Notification![0].hooks[0].command, 'node "/new/out/notificationRunner.js"');
+  });
+
+  it('leaves the Notification hook untouched when the 4th argument is omitted', () => {
+    const settings: ClaudeSettings = {
+      hooks: {
+        Notification: [
+          { matcher: 'permission_prompt|idle_prompt', hooks: [{ type: 'command', command: 'node "/old/out/notificationRunner.js"' }] },
+        ],
+      },
+    };
+
+    const changed = syncHookPathsInSettings(settings, 'node "/x/hookRunner.js"', 'node "/x/resumeRunner.js"');
+
+    assert.strictEqual(changed, false);
+    assert.strictEqual(settings.hooks!.Notification![0].hooks[0].command, 'node "/old/out/notificationRunner.js"');
+  });
 });
 
 describe('upsertHook', () => {
@@ -89,6 +124,23 @@ describe('upsertHook', () => {
 
     assert.strictEqual(hooks.Stop.length, 1);
     assert.strictEqual(hooks.Stop[0].hooks[0].command, 'node "/new/out/hookRunner.js"');
+  });
+
+  it('uses the given matcher for a newly-created group, defaulting to empty string', () => {
+    const hooksWithDefault: Record<string, { matcher?: string; hooks: { type: string; command: string; timeout?: number }[] }[] | undefined> = {};
+    upsertHook(hooksWithDefault, 'Stop', 'hookRunner.js', 'node "/x/out/hookRunner.js"');
+    assert.strictEqual(hooksWithDefault.Stop![0].matcher, '');
+
+    const hooksWithCustomMatcher: Record<string, { matcher?: string; hooks: { type: string; command: string; timeout?: number }[] }[] | undefined> = {};
+    upsertHook(
+      hooksWithCustomMatcher,
+      'Notification',
+      'notificationRunner.js',
+      'node "/x/out/notificationRunner.js"',
+      15,
+      'permission_prompt|idle_prompt'
+    );
+    assert.strictEqual(hooksWithCustomMatcher.Notification![0].matcher, 'permission_prompt|idle_prompt');
   });
 });
 

@@ -208,6 +208,22 @@ export async function forceBell(soundFilePath: string, log: Logger): Promise<voi
   await playLocalSound(soundFilePath, log);
 }
 
+const CONFIRMATION_ALERT_RING_GAP_MS = 450;
+
+/**
+ * Plays the notification sound twice in a row, with a short gap in between, so a moment that
+ * needs your attention (Claude Code asking for tool/plan permission, or waiting idle for your
+ * next message — see notificationRunner.ts) is audibly distinct from the single ring used for a
+ * normal task completion. Deliberately doesn't touch pause/resume state at all: this is a pure
+ * "something needs you" alert, not a task-completion event.
+ */
+export async function playConfirmationAlert(soundFilePath: string, log: Logger): Promise<void> {
+  log('Confirmation alert: playing the notification sound twice');
+  await playLocalSound(soundFilePath, log);
+  await new Promise((resolve) => setTimeout(resolve, CONFIRMATION_ALERT_RING_GAP_MS));
+  await playLocalSound(soundFilePath, log);
+}
+
 /**
  * Called when the user sends their next message: only sends a resume command if autoResume is
  * enabled AND we genuinely paused the music last time. If last time we played the notification

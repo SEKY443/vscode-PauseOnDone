@@ -59,7 +59,8 @@ export function buildHookCommand(scriptPath: string): string {
 export function syncHookPathsInSettings(
   settings: ClaudeSettings,
   currentHookRunnerCommand: string,
-  currentResumeRunnerCommand: string
+  currentResumeRunnerCommand: string,
+  currentNotificationRunnerCommand?: string
 ): boolean {
   if (!settings.hooks) {
     return false;
@@ -70,6 +71,11 @@ export function syncHookPathsInSettings(
   changed =
     rewriteMatchingCommands(settings.hooks.UserPromptSubmit, 'resumeRunner.js', currentResumeRunnerCommand) ||
     changed;
+  if (currentNotificationRunnerCommand) {
+    changed =
+      rewriteMatchingCommands(settings.hooks.Notification, 'notificationRunner.js', currentNotificationRunnerCommand) ||
+      changed;
+  }
   return changed;
 }
 
@@ -100,7 +106,8 @@ export function upsertHook(
   eventName: string,
   scriptName: string,
   command: string,
-  timeoutSeconds = 15
+  timeoutSeconds = 15,
+  matcher = ''
 ): void {
   const groups = hooks[eventName] ?? [];
   hooks[eventName] = groups;
@@ -115,7 +122,7 @@ export function upsertHook(
   }
 
   groups.push({
-    matcher: '',
+    matcher,
     hooks: [{ type: 'command', command, timeout: timeoutSeconds }],
   });
 }

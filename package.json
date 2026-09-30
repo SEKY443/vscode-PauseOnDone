@@ -2,7 +2,7 @@
   "name": "vscode-pause-on-done",
   "displayName": "PauseOnDone for VSCode",
   "description": "Automatically pauses background music when an AI or script finishes a task; plays a local notification sound if nothing was playing.",
-  "version": "0.1.8",
+  "version": "0.1.9",
   "publisher": "SEKY443",
   "license": "MIT",
   "repository": {
@@ -119,6 +119,11 @@
           "maximum": 3600,
           "description": "Only used when pauseOnDone.overnightMode.behavior is \"autoResumeAfterDelay\": how many seconds to wait before automatically resuming paused music, independent of pauseOnDone.autoResume or your next message."
         },
+        "pauseOnDone.confirmationAlert.enabled": {
+          "type": "boolean",
+          "default": false,
+          "description": "Ring the notification sound twice in a row whenever Claude Code needs your attention — asking for permission to use a tool (including exiting plan mode), or waiting idle for your next message. Requires re-running \"Pause on Done: Set Up Claude Code Hook\" once to add the underlying Notification hook if you set up hooks before this setting existed."
+        },
         "pauseOnDone.cooldownSeconds": {
           "type": "number",
           "default": 5,
@@ -146,6 +151,10 @@
       {
         "command": "pauseOnDone.testTrigger",
         "title": "Pause on Done: Manual Test Trigger"
+      },
+      {
+        "command": "pauseOnDone.testConfirmationAlert",
+        "title": "Pause on Done: Test Confirmation Alert"
       },
       {
         "command": "pauseOnDone.checkDependencies",

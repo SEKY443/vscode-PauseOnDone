@@ -35,6 +35,10 @@ describe('Extension activation', () => {
       commands.includes('pauseOnDone.removeClaudeHook'),
       'pauseOnDone.removeClaudeHook should be registered'
     );
+    assert.ok(
+      commands.includes('pauseOnDone.testConfirmationAlert'),
+      'pauseOnDone.testConfirmationAlert should be registered'
+    );
   });
 
   it('exposes the expected configuration defaults declared in package.json', () => {
@@ -50,6 +54,7 @@ describe('Extension activation', () => {
     assert.strictEqual(config.get('overnightMode.endTime'), '07:00');
     assert.strictEqual(config.get('overnightMode.behavior'), 'ringOnly');
     assert.strictEqual(config.get('overnightMode.autoResumeDelaySeconds'), 10);
+    assert.strictEqual(config.get('confirmationAlert.enabled'), false);
     assert.strictEqual(config.get('autoResume'), true);
     assert.strictEqual(config.get('cooldownSeconds'), 5);
     assert.strictEqual(config.get('autoPromptInstallDependencies'), true);

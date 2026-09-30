@@ -5,6 +5,7 @@ import {
   forceResume as coreForceResume,
   forceToggle as coreForceToggle,
   forceBell as coreForceBell,
+  playConfirmationAlert as corePlayConfirmationAlert,
   CompletionOptions,
 } from './mediaControlCore';
 import { resolveSoundPath, Logger } from './soundPlayer';
@@ -68,4 +69,14 @@ export async function forceToggle(outputChannel: vscode.OutputChannel): Promise<
 /** Debug token !PODBell! — force-play the notification sound, regardless of playback state. */
 export async function forceBell(outputChannel: vscode.OutputChannel): Promise<void> {
   await coreForceBell(resolveConfiguredSoundPath(), toLogger(outputChannel));
+}
+
+/**
+ * "Pause on Done: Test Confirmation Alert" command — lets you verify the double-ring sound
+ * without needing to actually trigger a real Claude Code permission/idle notification. Always
+ * rings regardless of pauseOnDone.confirmationAlert.enabled, mirroring how testTrigger always
+ * runs regardless of pauseOnDone.enabled.
+ */
+export async function triggerConfirmationAlert(outputChannel: vscode.OutputChannel): Promise<void> {
+  await corePlayConfirmationAlert(resolveConfiguredSoundPath(), toLogger(outputChannel));
 }
