@@ -1,5 +1,5 @@
 import * as path from 'path';
-import { playConfirmationAlert } from './mediaControlCore';
+import { CONFIRMATION_ALERT_SOUND_FILE, playConfirmationAlert } from './mediaControlCore';
 import { resolveSoundPath } from './soundPlayer';
 import { readHookConfig } from './hookConfigCore';
 
@@ -40,7 +40,7 @@ void (async () => {
   }
 
   const extensionRoot = path.join(__dirname, '..');
-  const soundFilePath = resolveSoundPath('bell_sound.wav', extensionRoot);
+  const soundFilePath = resolveSoundPath(CONFIRMATION_ALERT_SOUND_FILE, extensionRoot);
 
   await playConfirmationAlert(soundFilePath, log);
 

@@ -208,19 +208,20 @@ export async function forceBell(soundFilePath: string, log: Logger): Promise<voi
   await playLocalSound(soundFilePath, log);
 }
 
-const CONFIRMATION_ALERT_RING_GAP_MS = 450;
+/** File name of the bundled lower-pitched bell used for confirmation alerts, relative to the extension root. */
+export const CONFIRMATION_ALERT_SOUND_FILE = 'confirm_bell.wav';
 
 /**
- * Plays the notification sound twice in a row, with a short gap in between, so a moment that
- * needs your attention (Claude Code asking for tool/plan permission, or waiting idle for your
- * next message — see notificationRunner.ts) is audibly distinct from the single ring used for a
- * normal task completion. Deliberately doesn't touch pause/resume state at all: this is a pure
- * "something needs you" alert, not a task-completion event.
+ * Plays the bundled lower-pitched bell (the completion bell with its pitch lowered by a factor
+ * of 0.75 and its near-silent tail trimmed, ~1.3s) so a moment that needs your attention (Claude
+ * Code asking for tool/plan permission, or waiting idle for your next message — see
+ * notificationRunner.ts) is audibly distinct from the higher bell used for a normal task
+ * completion. A single ring is enough: the lower pitch alone is what sets it apart.
+ * Deliberately doesn't touch pause/resume state at all: this is a pure "something needs you"
+ * alert, not a task-completion event.
  */
 export async function playConfirmationAlert(soundFilePath: string, log: Logger): Promise<void> {
-  log('Confirmation alert: playing the notification sound twice');
-  await playLocalSound(soundFilePath, log);
-  await new Promise((resolve) => setTimeout(resolve, CONFIRMATION_ALERT_RING_GAP_MS));
+  log('Confirmation alert: playing the lower-pitched bell');
   await playLocalSound(soundFilePath, log);
 }
 
