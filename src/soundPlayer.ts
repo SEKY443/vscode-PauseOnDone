@@ -75,7 +75,7 @@ async function playWindowsSound(absoluteFilePath: string): Promise<void> {
     await execFileAsync(
       'powershell.exe',
       ['-NoProfile', '-NonInteractive', '-ExecutionPolicy', 'Bypass', '-WindowStyle', 'Hidden', '-File', scriptPath],
-      { windowsHide: true, timeout: 10000 }
+      { windowsHide: true, timeout: 15000 }
     );
   } finally {
     try {

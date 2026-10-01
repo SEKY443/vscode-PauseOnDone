@@ -28,7 +28,7 @@ Maybe this logic could be useful for AI too, so I tried it with Claude Code, and
 - **Smart media detection** — on macOS, uses [`nowplaying-cli`](https://github.com/kirtan-shah/nowplaying-cli) (falls back to AppleScript for Spotify/Music.app) to detect and control whatever's currently playing, including media playing in a browser. On Linux, uses `playerctl`. On Windows, uses the built-in WinRT media session API via PowerShell — no extra install needed.
 - **No repeated dinging** — if the music is already paused from an earlier trigger, it won't play the notification sound again on every subsequent completion.
 - **Overnight Mode** — during a time window you configure, skip the normal "stays paused until your next message" behavior, so an overnight run doesn't leave your music paused for hours. Choose between two behaviors: just ring without pausing at all, or pause-and-ring as usual but automatically resume after a short delay. See [Overnight Mode](#overnight-mode) below.
-- **Confirmation Alert** (opt-in) — plays a lower-pitched bell whenever Claude Code needs your attention: asking permission to use a tool (including exiting plan mode) or waiting idle for your next message. Useful if you step away while Claude is working through a plan or a permission prompt and want a distinct cue that it's stuck waiting on you, separate from the higher bell used for a normal task completion. See [Confirmation Alert](#confirmation-alert) below.
+- **Confirmation Alert** (opt-in) — rings a desk bell whenever Claude Code needs your attention: asking permission to use a tool (including exiting plan mode) or waiting idle for your next message. Useful if you step away while Claude is working through a plan or a permission prompt and want a distinct cue that it's stuck waiting on you, separate from the bell used for a normal task completion. See [Confirmation Alert](#confirmation-alert) below.
 
 ## Requirements
 
@@ -80,12 +80,12 @@ Overnight Mode is evaluated using your system's local time and only affects the 
 
 ## Confirmation Alert
 
-Off by default. Enable it with `pauseOnDone.confirmationAlert.enabled` to play a lower-pitched bell whenever Claude Code needs your attention, using its `Notification` hook event:
+Off by default. Enable it with `pauseOnDone.confirmationAlert.enabled` to ring a desk bell whenever Claude Code needs your attention, using its `Notification` hook event:
 
 - **Permission prompts** — Claude needs your permission to use a tool, including exiting plan mode to run a plan you approved.
 - **Idle prompts** — Claude Code has been waiting idle for your next message for a while.
 
-This is intentionally separate from the completion flow: it never touches pause/resume state, it just plays a bundled ~1.3s bell (`confirm_bell.wav` — the completion bell with its pitch lowered about five semitones; independent of `pauseOnDone.soundFile`), so it's audibly distinct from the higher bell used for a normal task completion. On Windows it's played the same way as the bell (a hidden PowerShell `SoundPlayer` call), so it stays a `.wav`. It also respects `pauseOnDone.playNotificationSound` — if you've turned notification sounds off entirely, Confirmation Alert stays silent too.
+This is intentionally separate from the completion flow: it never touches pause/resume state, it just plays a bundled ~8.8s desk bell (`confirm_desk_bell.wav`, independent of `pauseOnDone.soundFile`), so it's audibly distinct from the bell used for a normal task completion. On Windows it's played the same way as the bell (a hidden PowerShell `SoundPlayer` call), so it stays a `.wav`. It also respects `pauseOnDone.playNotificationSound` — if you've turned notification sounds off entirely, Confirmation Alert stays silent too.
 
 You can hear it any time via **"Pause on Done: Test Confirmation Alert"** from the Command Palette, without needing a real Claude Code permission/idle event.
 
@@ -114,7 +114,7 @@ Before uninstalling this extension, run **"Pause on Done: Remove Claude Code Hoo
 | `pauseOnDone.overnightMode.endTime` | `07:00` | Overnight Mode window end, 24-hour local time (`HH:mm`); can be earlier than the start time to span midnight |
 | `pauseOnDone.overnightMode.behavior` | `ringOnly` | `ringOnly` (never pause during the window) or `autoResumeAfterDelay` (pause and ring as usual, but auto-resume after a delay) |
 | `pauseOnDone.overnightMode.autoResumeDelaySeconds` | `10` | Only used when `behavior` is `autoResumeAfterDelay`: seconds to wait before auto-resuming |
-| `pauseOnDone.confirmationAlert.enabled` | `false` | Enable [Confirmation Alert](#confirmation-alert): play a lower-pitched bell when Claude Code needs your permission or is waiting idle for input |
+| `pauseOnDone.confirmationAlert.enabled` | `false` | Enable [Confirmation Alert](#confirmation-alert): ring a desk bell when Claude Code needs your permission or is waiting idle for input |
 | `pauseOnDone.cooldownSeconds` | `5` | Minimum time between triggers, for the terminal-scanning path |
 | `pauseOnDone.autoPromptInstallDependencies` | `true` | Whether to show the first-run install prompt described above |
 | `pauseOnDone.debugLogRawOutput` | `false` | Logs raw terminal output to the Output panel, for tuning keywords/regex |

@@ -122,7 +122,7 @@
         "pauseOnDone.confirmationAlert.enabled": {
           "type": "boolean",
           "default": false,
-          "description": "Play a lower-pitched bell whenever Claude Code needs your attention — asking for permission to use a tool (including exiting plan mode), or waiting idle for your next message. Requires re-running \"Pause on Done: Set Up Claude Code Hook\" once to add the underlying Notification hook if you set up hooks before this setting existed."
+          "description": "Ring a desk bell whenever Claude Code needs your attention — asking for permission to use a tool (including exiting plan mode), or waiting idle for your next message. Requires re-running \"Pause on Done: Set Up Claude Code Hook\" once to add the underlying Notification hook if you set up hooks before this setting existed."
         },
         "pauseOnDone.cooldownSeconds": {
           "type": "number",

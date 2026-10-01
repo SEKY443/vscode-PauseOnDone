@@ -3,3 +3,5 @@ node_modules/
 *.vsix
 .vscode-test/
 CHANGELOG.local.md
+
+.DS_Store

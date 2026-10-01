@@ -6,3 +6,5 @@ out/test/**
 .gitignore
 tsconfig.json
 **/*.map
+.DS_Store
+**/.DS_Store

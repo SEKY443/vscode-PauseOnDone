@@ -208,20 +208,18 @@ export async function forceBell(soundFilePath: string, log: Logger): Promise<voi
   await playLocalSound(soundFilePath, log);
 }
 
-/** File name of the bundled lower-pitched bell used for confirmation alerts, relative to the extension root. */
-export const CONFIRMATION_ALERT_SOUND_FILE = 'confirm_bell.wav';
+/** File name of the bundled desk bell sound used for confirmation alerts, relative to the extension root. */
+export const CONFIRMATION_ALERT_SOUND_FILE = 'confirm_desk_bell.wav';
 
 /**
- * Plays the bundled lower-pitched bell (the completion bell with its pitch lowered by a factor
- * of 0.75 and its near-silent tail trimmed, ~1.3s) so a moment that needs your attention (Claude
+ * Plays the bundled desk bell (a 16-bit PCM WAV, ~8.8s) so a moment that needs your attention (Claude
  * Code asking for tool/plan permission, or waiting idle for your next message — see
- * notificationRunner.ts) is audibly distinct from the higher bell used for a normal task
- * completion. A single ring is enough: the lower pitch alone is what sets it apart.
+ * notificationRunner.ts) is audibly distinct from the bell used for a normal task completion.
  * Deliberately doesn't touch pause/resume state at all: this is a pure "something needs you"
  * alert, not a task-completion event.
  */
 export async function playConfirmationAlert(soundFilePath: string, log: Logger): Promise<void> {
-  log('Confirmation alert: playing the lower-pitched bell');
+  log('Confirmation alert: playing the desk bell');
   await playLocalSound(soundFilePath, log);
 }
 
