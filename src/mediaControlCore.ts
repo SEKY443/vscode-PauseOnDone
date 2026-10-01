@@ -213,7 +213,7 @@ export const CONFIRMATION_ALERT_SOUND_FILE = 'confirm_desk_bell.wav';
 
 /**
  * Plays the bundled desk bell (a 16-bit PCM WAV, ~8.8s) so a moment that needs your attention (Claude
- * Code asking for tool/plan permission, or waiting idle for your next message — see
+ * Code asking for tool/plan permission or a decision from you — see
  * notificationRunner.ts) is audibly distinct from the bell used for a normal task completion.
  * Deliberately doesn't touch pause/resume state at all: this is a pure "something needs you"
  * alert, not a task-completion event.

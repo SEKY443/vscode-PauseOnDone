@@ -40,7 +40,7 @@ export function activate(context: vscode.ExtensionContext): void {
 
   // Manual test command for Confirmation Alert (see notificationRunner.ts): run "Pause on Done:
   // Test Confirmation Alert" to hear the alert sound without needing a real Claude Code
-  // permission/idle notification. Always rings, regardless of pauseOnDone.confirmationAlert.enabled.
+  // permission notification. Always rings, regardless of pauseOnDone.confirmationAlert.enabled.
   const testConfirmationAlertCommand = vscode.commands.registerCommand('pauseOnDone.testConfirmationAlert', () => {
     outputChannel.appendLine('[Pause on Done] Manual confirmation alert test triggered');
     void triggerConfirmationAlert(outputChannel);

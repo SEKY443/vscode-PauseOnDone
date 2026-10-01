@@ -6,6 +6,7 @@ import {
   ClaudeSettings,
   buildHookCommand,
   hasMatchingHook,
+  migrateHookMatcher,
   readClaudeSettings,
   removeHook,
   syncHookPathsInSettings,
@@ -93,6 +94,44 @@ describe('syncHookPathsInSettings', () => {
 
     assert.strictEqual(changed, false);
     assert.strictEqual(settings.hooks!.Notification![0].hooks[0].command, 'node "/old/out/notificationRunner.js"');
+  });
+});
+
+describe('migrateHookMatcher', () => {
+  const ours = (matcher: string) => ({
+    matcher,
+    hooks: [{ type: 'command', command: 'node "/x/out/notificationRunner.js"' }],
+  });
+  const logger = { matcher: '', hooks: [{ type: 'command', command: 'echo log >> notify.jsonl' }] };
+
+  it('rewrites our group when its matcher exactly equals the old default', () => {
+    const settings: ClaudeSettings = { hooks: { Notification: [logger, ours('permission_prompt|idle_prompt')] } };
+    const changed = migrateHookMatcher(settings, 'Notification', 'notificationRunner.js', 'permission_prompt|idle_prompt', 'permission_prompt');
+
+    assert.strictEqual(changed, true);
+    assert.strictEqual(settings.hooks!.Notification![1].matcher, 'permission_prompt');
+    assert.strictEqual(settings.hooks!.Notification![0].matcher, '', 'unrelated hook group must be untouched');
+  });
+
+  it('leaves a hand-customized matcher alone', () => {
+    const settings: ClaudeSettings = { hooks: { Notification: [ours('permission_prompt|elicitation_dialog')] } };
+    const changed = migrateHookMatcher(settings, 'Notification', 'notificationRunner.js', 'permission_prompt|idle_prompt', 'permission_prompt');
+
+    assert.strictEqual(changed, false);
+    assert.strictEqual(settings.hooks!.Notification![0].matcher, 'permission_prompt|elicitation_dialog');
+  });
+
+  it('does not touch an unrelated group that happens to use the old matcher', () => {
+    const someoneElse = { matcher: 'permission_prompt|idle_prompt', hooks: [{ type: 'command', command: 'say hi' }] };
+    const settings: ClaudeSettings = { hooks: { Notification: [someoneElse] } };
+    const changed = migrateHookMatcher(settings, 'Notification', 'notificationRunner.js', 'permission_prompt|idle_prompt', 'permission_prompt');
+
+    assert.strictEqual(changed, false);
+    assert.strictEqual(settings.hooks!.Notification![0].matcher, 'permission_prompt|idle_prompt');
+  });
+
+  it('returns false when the event has no hooks', () => {
+    assert.strictEqual(migrateHookMatcher({}, 'Notification', 'notificationRunner.js', 'a', 'b'), false);
   });
 });
 

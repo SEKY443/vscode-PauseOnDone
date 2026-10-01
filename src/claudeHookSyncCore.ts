@@ -79,6 +79,35 @@ export function syncHookPathsInSettings(
   return changed;
 }
 
+/**
+ * Rewrites the matcher of our own hook groups for `eventName` (identified by scriptName in a
+ * command) from exactly `oldMatcher` to `newMatcher`, mutating `settings` in place. Used to
+ * migrate installs set up with an older default matcher. Groups whose matcher is anything other
+ * than exactly `oldMatcher` are left alone, so a matcher the user customized by hand is never
+ * overwritten. Returns true if anything changed.
+ */
+export function migrateHookMatcher(
+  settings: ClaudeSettings,
+  eventName: string,
+  scriptName: string,
+  oldMatcher: string,
+  newMatcher: string
+): boolean {
+  const groups = settings.hooks?.[eventName];
+  if (!groups) {
+    return false;
+  }
+  let changed = false;
+  for (const group of groups) {
+    const isOurs = group.hooks.some((hook) => hook.type === 'command' && hook.command.includes(scriptName));
+    if (isOurs && group.matcher === oldMatcher) {
+      group.matcher = newMatcher;
+      changed = true;
+    }
+  }
+  return changed;
+}
+
 function rewriteMatchingCommands(groups: HookGroup[] | undefined, scriptName: string, newCommand: string): boolean {
   if (!groups) {
     return false;

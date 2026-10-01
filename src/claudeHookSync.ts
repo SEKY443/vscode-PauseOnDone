@@ -5,6 +5,7 @@ import {
   CLAUDE_SETTINGS_PATH,
   buildHookCommand,
   hasMatchingHook,
+  migrateHookMatcher,
   readClaudeSettings,
   removeHook,
   syncHookPathsInSettings,
@@ -15,13 +16,22 @@ import { STATE_FILE } from './mediaControlCore';
 
 const HAS_PROMPTED_SETUP_KEY = 'pauseOnDone.hasPromptedClaudeHookSetup';
 
-/** Matcher restricting the Notification hook to moments that actually need your attention — see notificationRunner.ts. */
-const NOTIFICATION_HOOK_MATCHER = 'permission_prompt|idle_prompt';
+/**
+ * Matcher restricting the Notification hook to moments that need a decision from you (tool
+ * permission, plan approval, a question) — see notificationRunner.ts. idle_prompt is deliberately
+ * excluded: it fires after nearly every finished turn while Claude waits for your next message,
+ * which the Stop hook's completion sound already covers.
+ */
+const NOTIFICATION_HOOK_MATCHER = 'permission_prompt';
+
+/** The default matcher shipped before idle_prompt was dropped; existing installs are migrated off it. */
+const LEGACY_NOTIFICATION_HOOK_MATCHER = 'permission_prompt|idle_prompt';
 
 /**
  * Called on every activation. Keeps a previously-configured Claude Code hook's path in sync with
- * this extension's current install location (see claudeHookSyncCore.ts for why that's needed).
- * Only touches hook entries that are already ours — never adds one that wasn't there before.
+ * this extension's current install location (see claudeHookSyncCore.ts for why that's needed),
+ * and migrates our Notification hook off the legacy matcher. Only touches hook entries that are
+ * already ours — never adds one that wasn't there before.
  */
 export function syncClaudeHookPaths(context: vscode.ExtensionContext, outputChannel: vscode.OutputChannel): void {
   const settings = readClaudeSettings();
@@ -33,16 +43,30 @@ export function syncClaudeHookPaths(context: vscode.ExtensionContext, outputChan
   const resumeRunnerCommand = buildHookCommand(path.join(context.extensionPath, 'out', 'resumeRunner.js'));
   const notificationRunnerCommand = buildHookCommand(path.join(context.extensionPath, 'out', 'notificationRunner.js'));
 
-  const changed = syncHookPathsInSettings(settings, hookRunnerCommand, resumeRunnerCommand, notificationRunnerCommand);
-  if (!changed) {
+  const pathsChanged = syncHookPathsInSettings(settings, hookRunnerCommand, resumeRunnerCommand, notificationRunnerCommand);
+  const matcherChanged = migrateHookMatcher(
+    settings,
+    'Notification',
+    'notificationRunner.js',
+    LEGACY_NOTIFICATION_HOOK_MATCHER,
+    NOTIFICATION_HOOK_MATCHER
+  );
+  if (!pathsChanged && !matcherChanged) {
     return;
   }
 
   try {
     writeClaudeSettings(settings);
-    outputChannel.appendLine(
-      '[Pause on Done] Updated a stale hook path in ~/.claude/settings.json (extension was likely updated to a new version)'
-    );
+    if (pathsChanged) {
+      outputChannel.appendLine(
+        '[Pause on Done] Updated a stale hook path in ~/.claude/settings.json (extension was likely updated to a new version)'
+      );
+    }
+    if (matcherChanged) {
+      outputChannel.appendLine(
+        `[Pause on Done] Updated the Notification hook matcher to "${NOTIFICATION_HOOK_MATCHER}" (no longer rings when Claude is just idle)`
+      );
+    }
   } catch (err) {
     outputChannel.appendLine(`[Pause on Done] Failed to update ~/.claude/settings.json: ${err}`);
   }

@@ -74,7 +74,7 @@ export async function forceBell(outputChannel: vscode.OutputChannel): Promise<vo
 
 /**
  * "Pause on Done: Test Confirmation Alert" command — lets you verify the alert sound
- * without needing to actually trigger a real Claude Code permission/idle notification. Always
+ * without needing to actually trigger a real Claude Code permission notification. Always
  * plays regardless of pauseOnDone.confirmationAlert.enabled, mirroring how testTrigger always
  * runs regardless of pauseOnDone.enabled.
  */

@@ -5,9 +5,9 @@ import { readHookConfig } from './hookConfigCore';
 
 /**
  * Standalone entry point with no VS Code dependency, called directly by Claude Code's
- * Notification hook (matcher: "permission_prompt|idle_prompt" — see claudeHookSync.ts), which
- * fires when Claude needs your permission for something (including exiting plan mode) or has been
- * waiting idle for your input. Deliberately does NOT touch pause/resume state at all — this is a
+ * Notification hook (matcher: "permission_prompt" — see claudeHookSync.ts), which
+ * fires when Claude needs a decision from you (tool permission, plan approval, a question). Idle
+ * "waiting for your input" notifications are deliberately not matched. Deliberately does NOT touch pause/resume state at all — this is a
  * standalone "something needs your attention" alert, independent of the task-completion flow in
  * hookRunner.ts.
  *
